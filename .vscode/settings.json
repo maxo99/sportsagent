@@ -1,0 +1,28 @@
+{
+    "debug.internalConsoleOptions": "openOnSessionStart",
+    "files.associations": {
+        "justfile": "makefile",
+        "Justfile": "makefile"
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/*.egg-info": true,
+        "**/*.pyc": {
+            "when": "$(basename).py"
+        },
+        "**/*.ruff_cache": true,
+        "**/*.venv": true,
+        "htmlcov": true
+    },
+    "pylint.args": [
+        "--rcfile=pyproject.toml",
+        "-j"
+    ],
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "ruff.configurationPreference": "filesystemFirst"
+}
