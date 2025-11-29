@@ -6,10 +6,10 @@
     "configurations": [
 
         {
-            "name": "streamlit debug - main",
+            "name": "chainlit debug - main",
             "type": "debugpy",
             "request": "launch",
-            "module": "streamlit",
+            "module": "chainlit",
             "args": [
                 "run",
                 "${workspaceFolder}\\main.py"
@@ -17,10 +17,10 @@
             "justMyCode": true,
         },
         {
-            "name": "streamlit debug (current file)",
+            "name": "chainlit debug (current file)",
             "type": "debugpy",
             "request": "launch",
-            "module": "streamlit",
+            "module": "chainlit",
             "args": [
                 "run",
                 "${file}"

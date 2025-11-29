@@ -1,14 +1,23 @@
 [project]
-name = "template-streamlit-uv"
+name = "sportsagent"
 version = "0.0.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = ["pydantic", "streamlit"]
+dependencies = [
+    "chainlit>=2.9.2",
+    "langgraph>=1.0.4",
+    "nflreadpy>=0.1.5",
+    "openai>=2.8.1",
+    "pandas>=2.3.3",
+    "pydantic",
+    # "streamlit",
+    "python-dotenv>=1.2.1",
+]
 
 
 [dependency-groups]
-dev = ["template-streamlit-uv", "pytest>=8.4.1"]
+dev = ["sportsagent", "pytest>=8.4.1"]
 
 
 [build-system]
@@ -17,16 +26,16 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ['src']
-include = ['template-streamlit-uv*']
+include = ['sportsagent*']
 
 [tool.uv.workspace]
-members = ["template-streamlit-uv"]
+members = ["sportsagent"]
 
 [tool.setuptools.package-data]
 "*" = ["data/*", "data/**/*"]
 
 [tool.uv.sources]
-template-streamlit-uv = { workspace = true }
+sportsagent = { workspace = true }
 
 
 [tool.pytest.ini_options]
@@ -40,7 +49,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-version_variables = ["src/template-streamlit-uv/__init__.py:__version__"]
+version_variables = ["src/sportsagent/__init__.py:__version__"]
 branch = "main"
 upload_to_pypi = false
 upload_to_release = true
@@ -151,4 +160,4 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["template-streamlit-uv"]
+known-first-party = ["sportsagent"]
