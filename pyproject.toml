@@ -5,14 +5,31 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    # "streamlit",
     "chainlit>=2.9.2",
-    "langgraph>=1.0.4",
     "nflreadpy>=0.1.5",
     "openai>=2.8.1",
     "pandas>=2.3.3",
     "pydantic",
-    # "streamlit",
     "python-dotenv>=1.2.1",
+    "langgraph>=1.0.0",
+    "langchain>=1.0.0",
+    "langchain-core>=1.0.0",
+    "langchain-openai>=1.0.0",
+    "langchain-anthropic>=1.0.0",
+    "langchain-community>=0.4",
+    "langgraph-cli[inmem]>=0.4.0",
+    "langchain-mcp-adapters",
+    "pydantic-settings>=2.12.0",
+]
+[project.optional-dependencies]
+dev = [
+    "sportsagent",
+    "pytest>=8.4.1",
+    "nbdime>=4.0.2",
+    "ruff>=0.6.1",
+    "mypy>=1.11.1",
+    "ipykernel",
 ]
 
 
@@ -73,8 +90,8 @@ allowed_tags = [
     "refactor",
     "test",
 ]
-minor_tags = ["feat"]
-patch_tags = ["fix", "perf"]
+minor_tags = []
+patch_tags = ["feat", "fix", "perf"]
 
 [tool.semantic_release.changelog.default_templates]
 changelog_file = "CHANGELOG.md"
