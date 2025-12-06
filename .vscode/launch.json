@@ -12,15 +12,39 @@
             "module": "chainlit",
             "args": [
                 "run",
-                "${workspaceFolder}\\main.py"
+                "${workspaceFolder}/src/sportsagent/main_cl.py"
             ],
             "justMyCode": true,
         },
+        // {
+        //     "name": "chainlit debug (current file)",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "module": "chainlit",
+        //     "args": [
+        //         "run",
+        //         "${file}"
+        //     ],
+        //     "justMyCode": true,
+        // },
+        //         {
+        //     "name": "streamlit debug - main",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "module": "streamlit",
+        //     "args": [
+        //         "run",
+        //         "${workspaceFolder}/src/jobfinder/main.py"
+        //     ],
+        //     "stopOnEntry": true,
+        //     "justMyCode": false,
+        //     "console": "internalConsole"
+        // },
         {
-            "name": "chainlit debug (current file)",
+            "name": "streamlit debug (current file)",
             "type": "debugpy",
             "request": "launch",
-            "module": "chainlit",
+            "module": "streamlit",
             "args": [
                 "run",
                 "${file}"

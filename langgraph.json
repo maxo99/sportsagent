@@ -1,0 +1,11 @@
+{
+    "dockerfile_lines": [],
+    "graphs": {
+      "sportsanalysisagent": "./sportsanalysisagent.py:agent"
+    },
+    "python_version": "3.13",
+    "env": ".env",
+    "dependencies": [
+      "."
+    ]
+  }
