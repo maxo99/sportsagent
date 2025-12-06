@@ -1,15 +1,26 @@
+import base64
+import json
 import os
 from functools import lru_cache
+from io import BytesIO
 
+import matplotlib.pyplot as plt
+import numpy as np
+import plotly.io as pio
 from jinja2 import Environment, FileSystemLoader, Template
+from PIL import Image
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 
 
 @lru_cache
 def get_prompt_template(template_name: str) -> Template:
-    template_dir = os.path.join(os.path.dirname(__file__), "../prompts")
+    template_dir = os.path.join(os.path.dirname(__file__), "prompts")
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(template_name)
     return template
+
 
 def map_exception_to_error(exception: Exception) -> dict:
     """Map an exception to a user-friendly error message and log details.
@@ -26,3 +37,159 @@ def map_exception_to_error(exception: Exception) -> dict:
         "user_message": user_message,
         "log_details": log_details,
     }
+
+
+def matplotlib_from_base64(
+    encoded: str,
+    title: str | None = None,
+    figsize: tuple = (8, 6),
+):
+    """
+    Convert a base64-encoded image to a matplotlib plot and display it.
+
+    Parameters:
+    -----------
+    encoded : str
+        The base64-encoded image string.
+    title : str, optional
+        A title for the plot. Default is None.
+    figsize : tuple, optional
+        Figure size (width, height) for the plot. Default is (8, 6).
+
+    Returns:
+    --------
+    fig, ax : tuple
+        The matplotlib figure and axes objects.
+    """
+    # Decode the base64 string to bytes
+    img_data = base64.b64decode(encoded)
+
+    # Load the bytes data into a BytesIO buffer
+    buf = BytesIO(img_data)
+
+    # Open the image using Pillow
+    img = Image.open(buf)
+
+    # Create a matplotlib figure and axis
+    fig, ax = plt.subplots(figsize=figsize)
+    # Display the image
+    ax.imshow(np.array(img))
+    # ax.imshow(np.array(img))
+
+    ax.axis("off")  # Hide the axis
+    ax.axis("off")  # Hide the axis
+
+    if title:
+        ax.set_title(title)
+
+    # Show the plot
+    plt.show()
+
+    return fig, ax
+
+
+def plotly_from_dict(plotly_graph_dict: dict):
+    """
+    Convert a Plotly graph dictionary to a Plotly graph object.
+
+    Parameters:
+    -----------
+    plotly_graph_dict: dict
+        A Plotly graph dictionary.
+
+    Returns:
+    --------
+    plotly_graph: plotly.graph_objs.graph_objs.Figure
+        A Plotly graph object.
+    """
+
+    if plotly_from_dict is None:
+        return None
+
+    return pio.from_json(json.dumps(plotly_graph_dict))
+
+
+def format_agent_name(agent_name: str) -> str:
+    formatted_name = agent_name.strip().replace("_", " ").upper()
+
+    return f"---{formatted_name}----"
+
+
+
+def format_message_content(message):
+    """Convert message content to displayable string."""
+    parts = []
+    tool_calls_processed = False
+
+    # Handle main content
+    if isinstance(message.content, str):
+        parts.append(message.content)
+    elif isinstance(message.content, list):
+        # Handle complex content like tool calls (Anthropic format)
+        for item in message.content:
+            if item.get("type") == "text":
+                parts.append(item["text"])
+            elif item.get("type") == "tool_use":
+                parts.append(f"\n🔧 Tool Call: {item['name']}")
+                parts.append(f"   Args: {json.dumps(item['input'], indent=2)}")
+                parts.append(f"   ID: {item.get('id', 'N/A')}")
+                tool_calls_processed = True
+    else:
+        parts.append(str(message.content))
+
+    # Handle tool calls attached to the message (OpenAI format) - only if not already processed
+    if not tool_calls_processed and hasattr(message, "tool_calls") and message.tool_calls:
+        for tool_call in message.tool_calls:
+            parts.append(f"\n🔧 Tool Call: {tool_call['name']}")
+            parts.append(f"   Args: {json.dumps(tool_call['args'], indent=2)}")
+            parts.append(f"   ID: {tool_call['id']}")
+
+    return "\n".join(parts)
+
+
+def format_messages(messages):
+    """Format and display a list of messages with Rich formatting."""
+    for m in messages:
+        msg_type = m.__class__.__name__.replace("Message", "")
+        content = format_message_content(m)
+
+        if msg_type == "Human":
+            console.print(Panel(content, title="🧑 Human", border_style="blue"))
+        elif msg_type == "Ai":
+            console.print(Panel(content, title="🤖 Assistant", border_style="green"))
+        elif msg_type == "Tool":
+            console.print(Panel(content, title="🔧 Tool Output", border_style="yellow"))
+        else:
+            console.print(Panel(content, title=f"📝 {msg_type}", border_style="white"))
+
+
+def format_message(messages):
+    """Alias for format_messages for backward compatibility."""
+    return format_messages(messages)
+
+
+def show_prompt(prompt_text: str, title: str = "Prompt", border_style: str = "blue"):
+    """Display a prompt with rich formatting and XML tag highlighting.
+
+    Args:
+        prompt_text: The prompt string to display
+        title: Title for the panel (default: "Prompt")
+        border_style: Border color style (default: "blue")
+    """
+    # Create a formatted display of the prompt
+    formatted_text = Text(prompt_text)
+    formatted_text.highlight_regex(r"<[^>]+>", style="bold blue")  # Highlight XML tags
+    formatted_text.highlight_regex(r"##[^#\n]+", style="bold magenta")  # Highlight headers
+    formatted_text.highlight_regex(r"###[^#\n]+", style="bold cyan")  # Highlight sub-headers
+
+    # Display in a panel for better presentation
+    console.print(
+        Panel(
+            formatted_text,
+            title=f"[bold green]{title}[/bold green]",
+            border_style=border_style,
+            padding=(1, 2),
+        )
+    )
+
+console = Console()

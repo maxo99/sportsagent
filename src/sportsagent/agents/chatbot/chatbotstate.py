@@ -11,18 +11,14 @@ type ConversationHistory = list[dict[str, Any]]
 
 
 class ChatbotState(BaseModel):
-    model_config = {
-        "arbitrary_types_allowed": True,
-        "validate_assignment": True,
-    }
     session_id: str
     user_query: Annotated[str, StringConstraints(strip_whitespace=True)]
     messages: list[BaseMessage] = Field(default_factory=list)
     parsed_query: ParsedQuery | None = Field(default=None)
+    retrieved_data: pd.DataFrame | None = Field(default=None)
     generated_response: str
     conversation_history: ConversationHistory = Field(default_factory=list)
     error: ErrorStates | None = Field(default=None)
-    retrieved_data: pd.DataFrame | None = Field(default=None)
 
     def __str__(self) -> str:
         return (

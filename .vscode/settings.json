@@ -13,7 +13,13 @@
         },
         "**/*.ruff_cache": true,
         "**/*.venv": true,
-        "htmlcov": true
+        ".files": true,
+        ".chainlit/translations": true,
+        ".langgraph_api": true,
+        "htmlcov": true,
+        ".python-version": true,
+        "uv.lock": true,
+        ".gitattributes": true,
     },
     "pylint.args": [
         "--rcfile=pyproject.toml",
