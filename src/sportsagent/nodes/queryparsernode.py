@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from sportsagent import utils
-from sportsagent.config import setup_logging
+from sportsagent.config import settings, setup_logging
 from sportsagent.constants import CURRENT_SEASON
 from sportsagent.datasource.nflreadpy import normalize_stat_names, normalize_team_names
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
@@ -51,6 +51,7 @@ def _extract_context_from_history(
         "recent_players": [],
         "recent_stats": [],
         "recent_teams": [],
+        "messages": [],
     }
 
     # Look at last 3 turns for context
@@ -64,6 +65,12 @@ def _extract_context_from_history(
         if "mentioned_stats" in turn:
             context["recent_stats"].extend(turn["mentioned_stats"])
 
+        # Capture raw conversation flow
+        if "content" in turn:
+            context["messages"].append(f"User: {turn['content']}")
+        if "response" in turn:
+            context["messages"].append(f"Assistant: {turn['response']}")
+
     # Remove duplicates while preserving order
     context["recent_players"] = list(dict.fromkeys(context["recent_players"]))
     context["recent_stats"] = list(dict.fromkeys(context["recent_stats"]))
@@ -76,11 +83,14 @@ def _build_parsing_prompt(user_query: str, context: dict[str, Any]) -> str:
         current_season=CURRENT_SEASON,
     )
 
-    if context["recent_players"] or context["recent_stats"]:
+    if context["recent_players"] or context["recent_stats"] or context["messages"]:
         prompt += "\n\n**CONVERSATION CONTEXT (Use this to resolve references):**"
 
+        if context["messages"]:
+            prompt += "\n\nRecent Dialogue:\n" + "\n".join(context["messages"])
+
         if context["recent_players"]:
-            prompt += f"\n- Recently mentioned players: {', '.join(context['recent_players'])}"
+            prompt += f"\n\n- Recently mentioned players: {', '.join(context['recent_players'])}"
             prompt += "\n  → If the query doesn't mention a player explicitly, assume it refers to these players"
 
         if context["recent_stats"]:
@@ -98,15 +108,13 @@ def _build_parsing_prompt(user_query: str, context: dict[str, Any]) -> str:
 async def _parse_query(state: ChatbotState) -> ChatbotState:
     try:
         user_query = state.user_query
+        logger.info(f"Parsing user query: {user_query[:50]}...")
         conversation_history = state.conversation_history
-
         context = _extract_context_from_history(conversation_history)
 
         system_prompt = _build_parsing_prompt(user_query, context)
 
-        llm = ChatOpenAI(
-            model="gpt-4",
-        )
+        llm = ChatOpenAI(model=settings.OPENAI_MODEL)
 
         structured_llm = llm.with_structured_output(ParsedQuery)
 
@@ -123,6 +131,7 @@ async def _parse_query(state: ChatbotState) -> ChatbotState:
         # Normalize stat names and team names
         parsed_result.statistics = normalize_stat_names(parsed_result.statistics)
         parsed_result.teams = normalize_team_names(parsed_result.teams)
+        parsed_result.positions = [p.upper() for p in parsed_result.positions]
 
         # Store parsed query in state
         state.parsed_query = parsed_result
@@ -134,7 +143,7 @@ async def _parse_query(state: ChatbotState) -> ChatbotState:
                 parsed_result.clarification_question
                 or "I need more information to answer your question. Could you please clarify?"
             )
-
+        logger.info(f"Parsed query: {parsed_result}")
         return state
 
     except Exception as e:

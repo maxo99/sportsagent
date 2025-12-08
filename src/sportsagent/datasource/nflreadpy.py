@@ -4,13 +4,28 @@ import nflreadpy as nfl
 import pandas as pd
 
 from sportsagent.config import setup_logging
-from sportsagent.constants import CURRENT_SEASON, STAT_MAPPINGS, TEAM_MAPPINGS
-from sportsagent.datasource.base import DataSourceBase
+from sportsagent.constants import CURRENT_SEASON, POSITION_STATS_MAP, STAT_MAPPINGS, TEAM_MAPPINGS
 
 logger = setup_logging(__name__)
 
 
-class NFLReadPyDataSource(DataSourceBase):
+
+class NFLReadPyDataSource:
+
+    def __init__(self) -> None:
+        # # from nflreadpy.config import update_config
+
+    # # update_config(
+    # #     cache_mode="memory",
+    # #     cache_dir='~/.nflreadpy',
+    # #     cache_duration=86400,
+    # #     verbose=False,
+    # #     timeout=30,
+    # #     user_agent='nflreadpy/v0.1.1'
+    # # )
+
+        super().__init__()
+
     @property
     def name(self) -> str:
         return "datasource_nflreadpy"
@@ -23,6 +38,7 @@ class NFLReadPyDataSource(DataSourceBase):
         stats: list[str] | None = None,
     ) -> pd.DataFrame:
         try:
+            logger.info(f"Retrieving stats for {player_name=}, {season=}, {week=}, {stats=}")
             # Normalize player name
             normalized_name = normalize_player_name(player_name)
 
@@ -40,6 +56,9 @@ class NFLReadPyDataSource(DataSourceBase):
                 raise ValueError("Unable to find player name column in nflreadpy data")
 
             if result.empty:
+                logger.error(
+                    f"Player '{player_name}' not found in nflreadpy data for season {season}"
+                )
                 raise ValueError(
                     f"Player '{player_name}' not found in nflreadpy data for season {season}"
                 )
@@ -47,6 +66,9 @@ class NFLReadPyDataSource(DataSourceBase):
             # Filter by week if specified
             if week is not None and "week" in result.columns:
                 result = result[result["week"] == week]
+
+            if not result.empty and "position" in result.columns:
+                result = _filter_cols_for_position(result)
 
             # Filter by requested stats if specified
             if stats is not None and not result.empty:
@@ -56,6 +78,9 @@ class NFLReadPyDataSource(DataSourceBase):
                 columns_to_select = list(set(available_key_cols + available_stats))
                 result = result[columns_to_select]
 
+            logger.info(
+                f"Retrieved dataframe with rows: {len(result)} cols: {list(result.columns)}"
+            )
             return result
 
         except ValueError as e:
@@ -67,6 +92,72 @@ class NFLReadPyDataSource(DataSourceBase):
         except Exception as e:
             logger.error(f"Error retrieving player stats from nflreadpy: {e}")
             raise Exception(f"Failed to retrieve player stats: {str(e)}") from e
+
+    def get_position_stats(
+        self,
+        position: str,
+        season: int | None = None,
+        week: int | None = None,
+        stats: list[str] | None = None,
+    ) -> pd.DataFrame:
+        try:
+            logger.info(f"Retrieving stats for {position=}, {season=}, {week=}, {stats=}")
+
+            if season is None:
+                season = CURRENT_SEASON
+
+            df = nfl.load_player_stats(seasons=season).to_pandas()
+
+            if "position" in df.columns:
+                result = df[df["position"].str.strip() == position.upper()].copy()
+            else:
+                raise ValueError("Unable to find position column in nflreadpy data")
+
+            if result.empty:
+                raise ValueError(f"'{position=}' not found in nflreadpy data for {season=}")
+
+            # Filter by week if specified
+            if week is not None and "week" in result.columns:
+                result = result[result["week"] == week]
+
+            if not result.empty and "position" in result.columns:
+                result = _filter_cols_for_position(result)
+
+            # Filter by requested stats if specified
+            if stats is not None and not result.empty:
+                key_columns = ["player_name", "team", "position", "season", "week"]
+                available_key_cols = [col for col in key_columns if col in result.columns]
+                available_stats = [col for col in stats if col in result.columns]
+                columns_to_select = list(set(available_key_cols + available_stats))
+                result = result[columns_to_select]
+
+            logger.info(
+                f"Retrieved dataframe with rows: {len(result)} cols: {list(result.columns)}"
+            )
+            return result
+
+        except ValueError as e:
+            logger.error(f"Validation error: {e}")
+            raise
+        except ConnectionError as e:
+            logger.error(f"Connection error: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error retrieving position stats from nflreadpy: {e}")
+            raise Exception(f"Failed to retrieve position stats: {str(e)}") from e
+
+
+def _filter_cols_for_position(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Filter DataFrame columns based on player position.
+
+    Args:
+        df: DataFrame containing player stats
+
+    Returns:
+        Filtered DataFrame with relevant columns for the specified position
+    """
+    return df[POSITION_STATS_MAP.get(df.iloc[0]["position"].upper(), [])]
 
 
 def normalize_player_name(

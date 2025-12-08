@@ -3,7 +3,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
-from sportsagent import settings
+from sportsagent.config import settings
 
 
 class BaseAgent:

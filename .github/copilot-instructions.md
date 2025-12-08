@@ -19,3 +19,7 @@
 -  Do not add function docstrings which do not provide additional information beyond the function name and it's parameters.
 -  New functions should always start with a try catch with a logger.error in the catch block and the exception to be re-raised.
 -  Use f-strings for string formatting.
+
+
+## Project Notes
+- deepagent implementation is deprecated and current focus is langgraph implementation starting from main_st.py

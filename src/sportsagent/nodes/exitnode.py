@@ -18,4 +18,15 @@ def exit_node(state: ChatbotState) -> ChatbotState:
     else:
         logger.info("Successful workflow completion")
 
+    # Update conversation history
+    new_turn = {
+        "role": "user",
+        "content": state.user_query,
+        "response": state.generated_response,
+        "mentioned_players": state.parsed_query.players if state.parsed_query else [],
+        "mentioned_stats": state.parsed_query.statistics if state.parsed_query else [],
+        "mentioned_teams": state.parsed_query.teams if state.parsed_query else [],
+    }
+    state.conversation_history.append(new_turn)
+
     return state

@@ -6,6 +6,8 @@ from colorama import Fore, Style
 from langchain.tools import tool
 from langgraph.prebuilt import InjectedState
 
+from sportsagent.models.comparisonmetric import ComparisionMetrics, ComparisonMetric
+
 
 @tool(response_format="content")
 def explain_data(
@@ -70,6 +72,91 @@ def describe_dataset(
     content = "Summary statistics computed using pandas describe()."
     artifact = {"describe_df": description_df.to_dict()}
     return content, artifact
+
+
+@tool(response_format="content_and_artifact")
+def compare_performance(
+    data_raw: Annotated[dict, InjectedState("data_raw")],
+) -> tuple[str, dict]:
+    """
+    Tool: compare_performance
+    Description:
+        Calculates comparison metrics between players in the dataset.
+        Identifies leaders and trailers for each numeric statistic.
+
+    Parameters:
+        data_raw (dict): Raw data injected from state.
+
+    Returns:
+        tuple[str, dict]: A summary string and the comparison metrics artifact.
+    """
+    print("    * Tool: compare_performance")
+    df = pd.DataFrame(data_raw)
+
+    if df.empty or len(df) < 2:
+        return "Insufficient data for comparison (need at least 2 records).", {}
+
+    metrics = ComparisionMetrics(player_count=len(df), comparisons=[])
+
+    # Get numeric columns for comparison
+    numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    stat_cols = [col for col in numeric_cols if col not in ["season", "week", "games_played"]]
+
+    # Calculate differences for each stat
+    for stat in stat_cols:
+        if stat in df.columns and df[stat].notna().any():
+            values = df[stat].dropna()
+            if len(values) >= 2:
+                max_val = values.max()
+                min_val = values.min()
+                if max_val > 0:  # Avoid division by zero and irrelevant stats
+                    pct_diff = ((max_val - min_val) / max_val) * 100
+
+                    # Find players with max and min values
+                    # Handle potential duplicates by taking the first one
+                    max_players = df.loc[df[stat] == max_val, "player_name"]
+                    max_player = (
+                        max_players.iloc[0]
+                        if isinstance(max_players, pd.Series)
+                        and not max_players.empty
+                        and "player_name" in df.columns
+                        else "Unknown"
+                    )
+
+                    min_players = df.loc[df[stat] == min_val, "player_name"]
+                    min_player = (
+                        min_players.iloc[0]
+                        if isinstance(min_players, pd.Series)
+                        and not min_players.empty
+                        and "player_name" in df.columns
+                        else "Unknown"
+                    )
+
+                    metrics.comparisons.append(
+                        ComparisonMetric(
+                            stat=stat,
+                            max_value=max_val,
+                            min_value=min_val,
+                            difference=max_val - min_val,
+                            percent_difference=pct_diff,
+                            leader=max_player,
+                            trailing=min_player,
+                        )
+                    )
+
+    # Sort comparisons by percent difference to highlight biggest gaps
+    metrics.comparisons.sort(key=lambda x: x.percent_difference, reverse=True)
+
+    # Generate summary string
+    summary_lines = [f"Comparison across {len(df)} players:"]
+    for comp in metrics.comparisons[:5]:  # Top 5 differences
+        stat_name = comp.stat.replace("_", " ").title()
+        summary_lines.append(
+            f"- {stat_name}: {comp.leader} ({comp.max_value:.1f}) vs {comp.trailing} ({comp.min_value:.1f}) "
+            f"| Diff: {comp.difference:.1f} ({comp.percent_difference:.1f}%)"
+        )
+
+    return "\n".join(summary_lines), metrics.model_dump()
 
 
 def get_dataframe_summary(

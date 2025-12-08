@@ -11,7 +11,8 @@ class Settings(BaseSettings):
     SRC_DIR: Path = BASE_DIR / "src"
     DATA_DIR: Path = SRC_DIR / "data"
     LOG_LEVEL: str = "INFO"
-    LLM_MODEL: str = "openai:gpt-4o-mini"
+    LLM_MODEL: str = "openai:gpt-4o"
+    OPENAI_MODEL: str = "gpt-4o"
     OPENAI_API_KEY: str = ""
     ENABLE_CHECKPOINTING: bool = False
     DEFAULT_SESSION: str = "default_session"

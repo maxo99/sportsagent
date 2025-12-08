@@ -1,507 +1,205 @@
-import html
-from pathlib import Path
-
-import dotenv
+import uuid
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
-from langchain_community.chat_message_histories import StreamlitChatMessageHistory
-from langchain_openai import ChatOpenAI
-from openai import OpenAI
 
-from sportsagent.agents.eda import EDAReActAgent
-from sportsagent.config import settings
-from sportsagent.utils import matplotlib_from_base64, plotly_from_dict
+from sportsagent.config import setup_logging
+from sportsagent.models.chatbotstate import ChatbotState
+from sportsagent.workflow import graph
+from sportsagent.utils import plotly_from_dict
 
-dotenv.load_dotenv()
+logger = setup_logging(__name__)
 
+# =============================================================================
+# STREAMLIT APP SETUP
+# =============================================================================
 
-# Helpers
+TITLE = "Sports Agent (LangGraph)"
+st.set_page_config(page_title=TITLE, page_icon="🏈")
+st.title("🏈 " + TITLE)
 
+# Initialize Session State
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = str(uuid.uuid4())
 
-def render_report_iframe(
-    report_src,
-    src_type="url",
-    height=620,
-    title="Interactive Report",
-):
-    """
-    Render a report iframe with expandable fullscreen functionality.
+if "workflow_config" not in st.session_state:
+    st.session_state["workflow_config"] = {
+        "configurable": {"thread_id": st.session_state["session_id"]}
+    }
 
-    Parameters:
-    ----------
-    report_src : str
-        Either the URL of the report (for src_type='url') or the raw HTML (for src_type='html').
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
-    src_type : str
-        Type of the source: 'url' or 'html'.
+if "workflow_trace" not in st.session_state:
+    st.session_state["workflow_trace"] = []
 
-    height : int
-        Height of the iframe component.
-    """
+# Sidebar
+st.sidebar.header("Debug Info")
+st.sidebar.write(f"Session ID: {st.session_state['session_id']}")
 
-    if src_type == "html":
-        iframe_src = f'srcdoc="{html.escape(report_src, quote=True)}"'
-    else:
-        iframe_src = f'src="{report_src}"'
-
-    html_code = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>{title}</title>
-        <style>
-            body, html {{
-                margin: 0;
-                padding: 0;
-                height: 100%;
-            }}
-            #iframe-container {{
-                position: relative;
-                width: 100%;
-                height: {height}px;
-            }}
-            #myIframe {{
-                width: 100%;
-                height: 100%;
-                border: none;
-            }}
-            #fullscreen-btn {{
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                z-index: 1000;
-                padding: 8px 12px;
-                background-color: #007bff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-            }}
-        </style>
-    </head>
-    <body>
-        <div id="iframe-container">
-            <button id="fullscreen-btn" onclick="toggleFullscreen()">Full Screen</button>
-            <iframe id="myIframe" {iframe_src} allowfullscreen></iframe>
-        </div>
-        <script>
-            function toggleFullscreen() {{
-                var container = document.getElementById("iframe-container");
-                if (!document.fullscreenElement) {{
-                    container.requestFullscreen().catch(err => {{
-                        alert("Error attempting to enable full-screen mode: " + err.message);
-                    }});
-                    document.getElementById("fullscreen-btn").innerText = "Exit Full Screen";
-                }} else {{
-                    document.exitFullscreen();
-                    document.getElementById("fullscreen-btn").innerText = "Full Screen";
-                }}
-            }}
-            document.addEventListener('fullscreenchange', () => {{
-                if (!document.fullscreenElement) {{
-                    document.getElementById("fullscreen-btn").innerText = "Full Screen";
-                }}
-            }});
-        </script>
-    </body>
-    </html>
-    """
-    components.html(html_code, height=height, scrolling=True)
+st.sidebar.subheader("Workflow Trace")
+for step in st.session_state["workflow_trace"]:
+    st.sidebar.text(f"→ {step}")
 
 
 # =============================================================================
-# STREAMLIT APP SETUP (including data upload, API key, etc.)
+# HELPERS
 # =============================================================================
-
-MODEL_LIST = ["gpt-4o-mini", "gpt-4o"]
-TITLE = "Your Exploratory Data Analysis (EDA) Copilot"
-st.set_page_config(page_title=TITLE, page_icon="📊")
-st.title("📊 " + TITLE)
-
-st.markdown("""
-Welcome to the EDA Copilot. This AI agent is designed to help you find and load data
-and return exploratory analysis reports that can be used to understand the data
-prior to other analysis (e.g. modeling, feature engineering, etc).
-""")
-
-with st.expander("Example Questions", expanded=False):
-    st.write(
-        """
-        - What tools do you have access to? Return a table.
-        - Give me information on the correlation funnel tool.
-        - Explain the dataset.
-        - What do the first 5 rows contain?
-        - Describe the dataset.
-        - Analyze missing data in the dataset.
-        - Generate a correlation funnel. Use the Churn feature as the target.
-        - Generate a Sweetviz report for the dataset. Use the Churn feature as the target.
-        - Generate a Dtale report for the dataset.
-        """
-    )
-
-# Sidebar for file upload / demo data
-st.sidebar.header("EDA Copilot: Data Upload/Selection", divider=True)
-st.sidebar.header("Upload Data (CSV or Excel)")
-use_demo_data = st.sidebar.checkbox("Use demo data", value=False)
-
-if "DATA_RAW" not in st.session_state:
-    st.session_state["DATA_RAW"] = None
-
-if use_demo_data:
-    demo_file_path = Path("data/churn_data.csv")
-    if demo_file_path.exists():
-        df = pd.read_csv(demo_file_path)
-        file_name = "churn_data"
-        st.session_state["DATA_RAW"] = df.copy()
-        st.write(f"## Preview of {file_name} data:")
-        st.dataframe(st.session_state["DATA_RAW"])
-    else:
-        st.error(f"Demo data file not found at {demo_file_path}. Please ensure it exists.")
-else:
-    uploaded_file = st.sidebar.file_uploader("Upload CSV or Excel file", type=["csv", "xlsx"])
-    if uploaded_file:
-        if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
-        elif uploaded_file.name.endswith(".xlsx"):
-            df = pd.read_excel(uploaded_file)
-        else:
-            st.error("Unsupported file type. Please upload a CSV or Excel file.")
-            st.stop()
-        st.session_state["DATA_RAW"] = df.copy()
-        file_name = Path(uploaded_file.name).stem
-        st.write(f"## Preview of {file_name} data:")
-        st.dataframe(st.session_state["DATA_RAW"])
-    else:
-        st.info("Please upload a CSV or Excel file or Use Demo Data to proceed.")
-
-# Sidebar: OpenAI API Key and Model Selection
-st.sidebar.header("Enter your OpenAI API Key")
-st.session_state["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
-
-if st.session_state["OPENAI_API_KEY"]:
-    client = OpenAI(api_key=st.session_state["OPENAI_API_KEY"])
-    try:
-        models = client.models.list()
-        st.success("API Key is valid!")
-    except Exception as e:
-        st.error(f"Invalid API Key: {e}")
-else:
-    st.info("Please enter your OpenAI API Key to proceed.")
-    st.stop()
-
-model_option = st.sidebar.selectbox("Choose OpenAI model", MODEL_LIST, index=0)
-OPENAI_LLM = ChatOpenAI(model=model_option, api_key=st.session_state["OPENAI_API_KEY"])
-llm = OPENAI_LLM
-
-
-# =============================================================================
-# CHAT MESSAGE HISTORY AND ARTIFACT STORAGE
-# =============================================================================
-
-msgs = StreamlitChatMessageHistory(key="langchain_messages")
-if len(msgs.messages) == 0:
-    msgs.add_ai_message("How can I help you?")
-
-if "chat_artifacts" not in st.session_state:
-    st.session_state["chat_artifacts"] = {}
 
 
 def display_chat_history():
-    """
-    Renders the entire chat history along with any artifacts attached to messages.
-    Artifacts (e.g., plots, dataframes, Sweetviz reports) are rendered inside expanders.
-    """
-    for i, msg in enumerate(msgs.messages):
-        with st.chat_message(msg.type):
-            st.write(msg.content)
-            if "chat_artifacts" in st.session_state and i in st.session_state["chat_artifacts"]:
-                for artifact in st.session_state["chat_artifacts"][i]:
-                    with st.expander(artifact["title"], expanded=True):
-                        if artifact["render_type"] == "dataframe":
-                            st.dataframe(artifact["data"])
-                        elif artifact["render_type"] == "matplotlib":
-                            st.pyplot(artifact["data"])
-                        elif artifact["render_type"] == "plotly":
-                            st.plotly_chart(artifact["data"])
-                        elif artifact["render_type"] == "sweetviz":
-                            report_file = artifact["data"].get("report_file")
-                            try:
-                                with open(report_file, encoding="utf-8") as f:
-                                    report_html = f.read()
-                            except Exception as e:
-                                st.error(f"Could not open report file: {e}")
-                                report_html = "<h1>Report not found</h1>"
-
-                            render_report_iframe(
-                                report_html,
-                                src_type="html",
-                                height=620,
-                                title="Sweetviz Report",
-                            )
-                        elif artifact["render_type"] == "dtale":
-                            dtale_url = artifact["data"]["dtale_url"]
-                            render_report_iframe(
-                                dtale_url,
-                                src_type="url",
-                                height=620,
-                                title="Dtale Report",
-                            )
-
-                        else:
-                            st.write("Artifact of unknown type.")
+    for msg in st.session_state["messages"]:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            if "elements" in msg:
+                for element in msg["elements"]:
+                    if element["type"] == "plotly":
+                        st.plotly_chart(element["data"])
 
 
-# =============================================================================
-# PROCESS AGENTS AND ARTIFACTS
-# =============================================================================
+def run_workflow(inputs=None):
+    """Runs the workflow, handling interrupts for visualization and approval."""
 
+    config = st.session_state["workflow_config"]
 
-def process_exploratory(
-    question: str,
-    data: pd.DataFrame,
-) -> dict:
-    """
-    Initializes and calls the EDA agent using the provided question and data.
-    Processes any returned artifacts (plots, dataframes, etc.) and returns a result dict.
-    """
-    eda_agent = EDAReActAgent(
-        # invoke_react_agent_kwargs={"recursion_limit": 10},
-    )
-
-    eda_agent.invoke_agent(
-        user_instructions=question,
-        data_raw=data,
-    )
-
-    tool_calls = eda_agent.get_tool_calls()
-    ai_message = eda_agent.get_ai_message(markdown=False)
-    artifacts = eda_agent.get_artifacts(as_dataframe=False)
-
-    result = {
-        "ai_message": ai_message,
-        "tool_calls": tool_calls,
-        "artifacts": artifacts,
-    }
-
-    if tool_calls:
-        last_tool_call = tool_calls[-1]
-        result["last_tool_call"] = last_tool_call
-        tool_name = last_tool_call
-
-        print(f"Tool Name: {tool_name}")
-
-        if tool_name == "explain_data":
-            result["explanation"] = ai_message
-
-        elif tool_name == "describe_dataset":
-            if artifacts is not None and isinstance(artifacts, dict) and "describe_df" in artifacts:
-                try:
-                    df = pd.DataFrame(artifacts["describe_df"])
-                    result["describe_df"] = df
-                except Exception as e:
-                    st.error(f"Error processing describe_dataset artifact: {e}")
-
-        elif tool_name == "visualize_missing":
-            if artifacts is not None and isinstance(artifacts, dict):
-                try:
-                    matrix_fig = matplotlib_from_base64(str(artifacts.get("matrix_plot")))
-                    bar_fig = matplotlib_from_base64(str(artifacts.get("bar_plot")))
-                    heatmap_fig = matplotlib_from_base64(str(artifacts.get("heatmap_plot")))
-                    result["matrix_plot_fig"] = matrix_fig
-                    result["bar_plot_fig"] = bar_fig
-                    result["heatmap_plot_fig"] = heatmap_fig
-                except Exception as e:
-                    st.error(f"Error processing visualize_missing artifact: {e}")
-
-        elif tool_name == "generate_correlation_funnel":
-            if artifacts is not None and isinstance(artifacts, dict):
-                if "correlation_data" in artifacts:
-                    try:
-                        corr_df = pd.DataFrame(artifacts["correlation_data"])
-                        result["correlation_data"] = corr_df
-                    except Exception as e:
-                        st.error(f"Error processing correlation_data: {e}")
-                if "plotly_figure" in artifacts:
-                    try:
-                        corr_plotly = plotly_from_dict(artifacts["plotly_figure"])
-                        result["correlation_plotly"] = corr_plotly
-                    except Exception as e:
-                        st.error(f"Error processing correlation funnel Plotly figure: {e}")
-
-        elif tool_name == "generate_sweetviz_report":
-            if artifacts is not None and isinstance(artifacts, dict):
-                result["report_file"] = artifacts.get("report_file")
-                result["report_html"] = artifacts.get("report_html")
-
-        elif tool_name == "generate_dtale_report":
-            if artifacts is not None and isinstance(artifacts, dict):
-                result["dtale_url"] = artifacts.get("dtale_url")
-
-        else:
-            if artifacts is not None and isinstance(artifacts, dict):
-                if "plotly_figure" in artifacts:
-                    try:
-                        plotly_fig = plotly_from_dict(artifacts["plotly_figure"])
-                        result["plotly_fig"] = plotly_fig
-                    except Exception as e:
-                        st.error(f"Error processing Plotly figure: {e}")
-                if "plot_image" in artifacts:
-                    try:
-                        fig = matplotlib_from_base64(artifacts["plot_image"])
-                        result["matplotlib_fig"] = fig
-                    except Exception as e:
-                        st.error(f"Error processing matplotlib image: {e}")
-                if "dataframe" in artifacts:
-                    try:
-                        df = pd.DataFrame(artifacts["dataframe"])
-                        result["dataframe"] = df
-                    except Exception as e:
-                        st.error(f"Error converting artifact to dataframe: {e}")
+    # If inputs is None, we are resuming
+    if inputs is None:
+        logger.info("Resuming workflow...")
+        # Clear trace on new run if not resuming? No, keep history or clear?
+        # Let's append to existing trace for the session
+        stream = graph.stream(None, config=config, stream_mode="updates")
     else:
-        result["plain_response"] = ai_message
+        logger.info("Starting workflow...")
+        st.session_state["workflow_trace"] = []  # Clear trace for new query
+        stream = graph.stream(inputs, config=config, stream_mode="updates")
 
-    return result
+    final_state = None
+    for chunk in stream:
+        for node_name, node_state in chunk.items():
+            logger.info(f"Executed node: {node_name}")
+            st.session_state["workflow_trace"].append(node_name)
+            # Force sidebar update? st.rerun() might be too aggressive here.
+            # We can use a placeholder if we want real-time updates, but sidebar is tricky.
+            # For now, just appending to state. The sidebar will update on next rerun.
+            final_state = node_state  # Keep track of the latest state
+
+    # If stream finishes, we have the final state in final_state (or we need to get it)
+    # Actually, graph.stream yields updates. The last update might not be the full state.
+    # It's safer to get the state at the end.
+
+    # Check state after invoke (it might be paused)
+    snapshot = graph.get_state(config)
+    result = snapshot.values  # This effectively becomes our result/final_state
+
+    # Check state after invoke (it might be paused)
+    snapshot = graph.get_state(config)
+
+    # Update sidebar data from snapshot
+    if snapshot.values and "retrieved_data" in snapshot.values:
+        data = snapshot.values["retrieved_data"]
+        if data:
+            st.session_state["current_dataframe"] = pd.DataFrame(data)
+
+    if snapshot.next:
+        if "visualization" in snapshot.next:
+            st.session_state["interrupt_state"] = "visualization"
+            st.rerun()
+        elif "approval" in snapshot.next:
+            st.session_state["interrupt_state"] = "approval"
+            st.session_state["approval_query"] = snapshot.values.get("user_query")
+            st.rerun()
+    else:
+        # Workflow finished
+        st.session_state["interrupt_state"] = None
+        # Use the result we captured/derived
+        process_final_result(result)
 
 
-# =============================================================================
-# MAIN INTERACTION: GET USER QUESTION AND HANDLE RESPONSE
-# =============================================================================
+def process_final_result(final_state):
+    # Update sidebar data from final state
+    if final_state and "retrieved_data" in final_state:
+        data = final_state["retrieved_data"]
+        if data:
+            st.session_state["current_dataframe"] = pd.DataFrame(data)
 
-if st.session_state["DATA_RAW"] is not None:
-    # Use the built-in chat input widget
-    question = st.chat_input("Enter your question here:", key="query_input")
-    if question:
-        if not st.session_state["OPENAI_API_KEY"]:
-            st.error("Please enter your OpenAI API Key to proceed.")
-            st.stop()
+    response = final_state.get("generated_response", "")
+    visualization = final_state.get("visualization")
 
-        with st.spinner("Thinking..."):
-            # Add the user's question to the message history
-            msgs.add_user_message(question)
-            result = process_exploratory(question, st.session_state["DATA_RAW"])
+    elements = []
+    if visualization:
+        # If it's a dict (from JSON serialization), convert back to figure
+        if isinstance(visualization, dict):
+            fig = plotly_from_dict(visualization)
+            elements.append({"type": "plotly", "data": fig})
+        else:
+            elements.append({"type": "plotly", "data": visualization})
 
-            tool_name = None
-            if "last_tool_call" in result:
-                tool_name = result["last_tool_call"]
-
-            # Append the AI response and (if available) tool usage info
-            ai_msg = result.get("ai_message", "")
-            if tool_name:
-                ai_msg += f"\n\n*Tool Used: {tool_name}*"
-
-            msgs.add_ai_message(ai_msg)
-
-            # Build an artifact list to attach to the latest AI message
-            artifact_list = []
-            if "last_tool_call" in result:
-                tool_name = result["last_tool_call"]
-                if tool_name == "describe_dataset":
-                    if "describe_df" in result:
-                        artifact_list.append(
-                            {
-                                "title": "Dataset Description",
-                                "render_type": "dataframe",
-                                "data": result["describe_df"],
-                            }
-                        )
-                # elif tool_name == "visualize_missing":
-                #     if "matrix_plot_fig" in result:
-                #         artifact_list.append(
-                #             {
-                #                 "title": "Missing Data Matrix",
-                #                 "render_type": "matplotlib",
-                #                 "data": result["matrix_plot_fig"],
-                #             }
-                #         )
-                #     if "bar_plot_fig" in result:
-                #         artifact_list.append(
-                #             {
-                #                 "title": "Missing Data Bar Plot",
-                #                 "render_type": "matplotlib",
-                #                 "data": result["bar_plot_fig"],
-                #             }
-                #         )
-                #     if "heatmap_plot_fig" in result:
-                #         artifact_list.append(
-                #             {
-                #                 "title": "Missing Data Heatmap",
-                #                 "render_type": "matplotlib",
-                #                 "data": result["heatmap_plot_fig"],
-                #             }
-                #         )
-                # elif tool_name == "generate_correlation_funnel":
-                #     if "correlation_data" in result:
-                #         artifact_list.append(
-                #             {
-                #                 "title": "Correlation Data",
-                #                 "render_type": "dataframe",
-                #                 "data": result["correlation_data"],
-                #             }
-                #         )
-                #     if "correlation_plotly" in result:
-                #         artifact_list.append(
-                #             {
-                #                 "title": "Correlation Funnel (Interactive Plotly)",
-                #                 "render_type": "plotly",
-                #                 "data": result["correlation_plotly"],
-                #             }
-                #         )
-                # elif tool_name == "generate_sweetviz_report":
-                #     artifact_list.append(
-                #         {
-                #             "title": "Sweetviz Report",
-                #             "render_type": "sweetviz",
-                #             "data": {
-                #                 "report_file": result.get("report_file"),
-                #                 "report_html": result.get("report_html"),
-                #             },
-                #         }
-                #     )
-                # elif tool_name == "generate_dtale_report":
-                #     artifact_list.append(
-                #         {
-                #             "title": "Dtale Interactive Report",
-                #             "render_type": "dtale",
-                #             "data": {"dtale_url": result.get("dtale_url")},
-                #         }
-                #     )
-
-                else:
-                    if "plotly_fig" in result:
-                        artifact_list.append(
-                            {
-                                "title": "Plotly Figure",
-                                "render_type": "plotly",
-                                "data": result["plotly_fig"],
-                            }
-                        )
-                    if "matplotlib_fig" in result:
-                        artifact_list.append(
-                            {
-                                "title": "Matplotlib Figure",
-                                "render_type": "matplotlib",
-                                "data": result["matplotlib_fig"],
-                            }
-                        )
-                    if "dataframe" in result:
-                        artifact_list.append(
-                            {
-                                "title": "Dataframe",
-                                "render_type": "dataframe",
-                                "data": result["dataframe"],
-                            }
-                        )
-
-            # Attach artifacts to the most recent AI message (so they show immediately)
-            if artifact_list:
-                msg_index = len(msgs.messages) - 1
-                st.session_state["chat_artifacts"][msg_index] = artifact_list
+    st.session_state["messages"].append(
+        {"role": "assistant", "content": response, "elements": elements}
+    )
+    st.rerun()
 
 
 # =============================================================================
-# FINAL RENDER: DISPLAY THE COMPLETE CHAT HISTORY WITH ARTIFACTS
+# MAIN UI
 # =============================================================================
 
 display_chat_history()
+
+# Handle Interrupts
+if st.session_state.get("interrupt_state") == "visualization":
+    with st.chat_message("assistant"):
+        st.write("I can generate a visualization for this. Do you want me to proceed?")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Yes, generate chart"):
+                st.session_state["interrupt_state"] = None
+                with st.spinner("Generating visualization..."):
+                    run_workflow(None)  # Resume
+        with col2:
+            if st.button("No, skip"):
+                st.session_state["interrupt_state"] = None
+                # TODO: Handle skip logic (might need a way to inject a "skip" signal or just break)
+                # For now, we just resume and let the node handle it (or we might need to update state)
+                # In main_cl.py we just break. Here we probably want to just resume but maybe set needs_visualization=False?
+                # Actually, if we resume without updating state, it will just try to run visualization_node again.
+                # We need to update the state to skip visualization.
+                config = st.session_state["workflow_config"]
+                graph.update_state(config, {"needs_visualization": False})
+                run_workflow(None)
+
+elif st.session_state.get("interrupt_state") == "approval":
+    query = st.session_state.get("approval_query", "unknown")
+    with st.chat_message("assistant"):
+        st.write(f"I need to fetch more data for: '{query}'. Do you approve?")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Yes, fetch data"):
+                st.session_state["interrupt_state"] = None
+                with st.spinner(f"Fetching data for {query}..."):
+                    run_workflow(None)
+        with col2:
+            if st.button("No, stop"):
+                st.session_state["interrupt_state"] = None
+                st.session_state["messages"].append(
+                    {"role": "assistant", "content": "Data retrieval cancelled."}
+                )
+                st.rerun()
+
+# Chat Input
+if prompt := st.chat_input("Ask me about NFL stats..."):
+    st.session_state["messages"].append({"role": "user", "content": prompt})
+
+    initial_state = ChatbotState(
+        session_id=st.session_state["session_id"],
+        user_query=prompt,
+        generated_response="",
+        conversation_history=[],  # We could populate this from st.session_state["messages"] if needed
+    )
+
+    with st.spinner("Thinking..."):
+        run_workflow(initial_state)
+
+# Debug / Data View
+if "current_dataframe" in st.session_state:
+    with st.expander("Current Data", expanded=False):
+        st.dataframe(st.session_state["current_dataframe"])

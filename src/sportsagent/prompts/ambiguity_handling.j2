@@ -1,0 +1,11 @@
+
+AMBIGUITY HANDLING:
+- If the query is ambiguous (e.g., multiple players with similar names, unclear time period), set needs_clarification=True
+- Provide a specific clarification_question to ask the user
+- If you can make a reasonable assumption based on context, do so and set needs_clarification=False
+
+STATISTICAL CATEGORIES:
+Common stats include: passing_yards, rushing_yards, receiving_yards, touchdowns, completions, attempts, 
+completion_rate, interceptions, receptions, targets, yards_per_attempt, yards_per_reception, epa
+
+User Query: {{ user_query }}

@@ -26,4 +26,27 @@ def think_tool(reflection: str) -> str:
     Returns:
         Confirmation that reflection was recorded for decision-making
     """
+
     return f"Reflection recorded: {reflection}"
+
+
+@tool(parse_docstring=True, error_on_invalid_docstring=False)
+def request_more_data(query: str) -> str:
+    """
+    Tool: request_more_data
+    Description:
+        Signals that more data is needed to answer the user's question.
+        This will trigger a new retrieval process with the provided query.
+
+        CRITICAL: Only use this tool if the CURRENT dataset is completely missing the required information.
+        Do NOT use this tool if you already have data for the requested player/team/season.
+        Check the provided data sample first!
+
+    Parameters:
+        query (str): The specific query to retrieve more data (e.g., "Josh Allen stats 2023").
+
+    Returns:
+        str: Confirmation message.
+    """
+
+    return f"REQUEST_MORE_DATA: {query}"

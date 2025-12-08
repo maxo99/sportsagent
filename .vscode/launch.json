@@ -16,6 +16,18 @@
             ],
             "justMyCode": true,
         },
+        {
+            "name": "streamlit debug - main",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "${workspaceFolder}/src/sportsagent/main_st.py"
+            ],
+            "justMyCode": false,
+        }
+
         // {
         //     "name": "chainlit debug (current file)",
         //     "type": "debugpy",
@@ -27,29 +39,17 @@
         //     ],
         //     "justMyCode": true,
         // },
-        //         {
-        //     "name": "streamlit debug - main",
+
+        // {
+        //     "name": "streamlit debug (current file)",
         //     "type": "debugpy",
         //     "request": "launch",
         //     "module": "streamlit",
         //     "args": [
         //         "run",
-        //         "${workspaceFolder}/src/jobfinder/main.py"
+        //         "${file}"
         //     ],
-        //     "stopOnEntry": true,
-        //     "justMyCode": false,
-        //     "console": "internalConsole"
-        // },
-        {
-            "name": "streamlit debug (current file)",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "streamlit",
-            "args": [
-                "run",
-                "${file}"
-            ],
-            "justMyCode": true,
-        }
+        //     "justMyCode": true,
+        // }
     ]
 }

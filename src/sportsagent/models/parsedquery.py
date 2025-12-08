@@ -9,6 +9,7 @@ class TimePeriod(BaseModel):
     specific_weeks: list[int] | None = Field(default=None, description="Specific week numbers")
     career: bool = Field(default=False, description="Whether to query career statistics")
 
+
 class QueryFilters(BaseModel):
     opponent: str | None = Field(default=None, description="Opponent team")
     home_away: str | None = Field(default=None, description="'home', 'away', or None")
@@ -22,16 +23,21 @@ class QueryFilters(BaseModel):
 
 class ParsedQuery(BaseModel):
     players: list[str] = Field(default_factory=list, description="List of player names mentioned")
+    positions: list[str] = Field(
+        default_factory=list, description="List of positions mentioned (e.g., QB, RB, WR)"
+    )
     teams: list[str] = Field(default_factory=list, description="List of team names mentioned")
     statistics: list[str] = Field(
         default_factory=list,
         description="Statistical categories requested (e.g., 'passing_yards', 'touchdowns', 'completion_rate')",
     )
     time_period: TimePeriod = Field(
-        default_factory=TimePeriod, description="Time period for the query",
+        default_factory=TimePeriod,
+        description="Time period for the query",
     )
     filters: QueryFilters = Field(
-        default_factory=QueryFilters, description="Additional query filters",
+        default_factory=QueryFilters,
+        description="Additional query filters",
     )
     comparison: bool = Field(
         default=False,

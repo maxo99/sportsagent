@@ -39,7 +39,7 @@ def should_continue_after_parser(state: ChatbotState) -> Literal["retriever", "e
     return "retriever"
 
 
-def should_continue_after_retriever(state: ChatbotState) -> Literal["llm", "exit"]:
+def should_continue_after_retriever(state: ChatbotState) -> Literal["analyzer", "exit"]:
     # Check for retrieval errors
     if state.error and "retriever" in state.error:
         logger.info("Retriever -> Exit (retrieval error)")
@@ -47,7 +47,7 @@ def should_continue_after_retriever(state: ChatbotState) -> Literal["llm", "exit
 
     # Check if data was retrieved
     retrieved_data = state.retrieved_data
-    if retrieved_data is None or retrieved_data.empty:
+    if retrieved_data is None or len(retrieved_data) == 0:
         logger.info("Retriever -> Exit (no data)")
         if not state.generated_response:
             state.generated_response = (
@@ -56,22 +56,39 @@ def should_continue_after_retriever(state: ChatbotState) -> Literal["llm", "exit
             )
         return "exit"
 
-    logger.info("Retriever -> LLM")
-    return "llm"
+    logger.info("Retriever -> analyzer")
+    return "analyzer"
 
 
-def should_continue_after_llm(state: ChatbotState) -> Literal["memory", "exit"]:
-    # Check for LLM errors
-    if state.error and "llm" in state.error:
-        logger.warning("LLM -> Memory (with error, but continuing)")
-        # Continue to memory even with errors to maintain conversation history
-        return "memory"
+# def should_continue_after_analyzer(state: ChatbotState) -> Literal["memory", "exit"]:
+#     # Check for analyzer errors
+#     if state.error and "analyzer" in state.error:
+#         logger.warning("analyzer -> Memory (with error, but continuing)")
+#         # Continue to memory even with errors to maintain conversation history
+#         return "memory"
 
-    # Check if response was generated
-    if not state.generated_response:
-        logger.warning("LLM -> Exit (no response generated)")
-        state.generated_response = "I couldn't generate a response. Please try again."
-        return "exit"
+#     # Check if response was generated
+#     if not state.generated_response:
+#         logger.warning("analyzer -> Exit (no response generated)")
+#         state.generated_response = "I couldn't generate a response. Please try again."
+#         return "exit"
 
-    logger.info("LLM -> Memory")
-    return "memory"
+#     logger.info("analyzer -> Memory")
+#     return "memory"
+
+
+def should_continue_after_analyzer(state: ChatbotState) -> Literal["approval", "visualization", "exit"]:
+    # Check for routing signal
+    if state.generated_response and state.generated_response.startswith("__ROUTE_TO_RETRIEVER__"):
+        logger.info("Analyzer -> Approval (request more data)")
+        # Clean up the response before routing
+        # The query is already in state.user_query
+        state.generated_response = ""
+        return "approval"
+
+    if state.needs_visualization:
+        logger.info("Analyzer -> Visualization")
+        return "visualization"
+
+    logger.info("Analyzer -> Exit")
+    return "exit"

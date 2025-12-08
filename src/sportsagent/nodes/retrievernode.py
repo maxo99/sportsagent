@@ -3,12 +3,16 @@ import asyncio
 import pandas as pd
 
 from sportsagent.config import setup_logging
+from sportsagent.constants import POSITION_STATS_MAP
 from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import QueryFilters
 
 logger = setup_logging(__name__)
+
+
+NFL_DATASOURCE = NFLReadPyDataSource()
 
 
 async def retrieve_data(state: ChatbotState) -> ChatbotState:
@@ -24,25 +28,61 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
 
         # Extract query parameters
         players = state.parsed_query.players
+        positions = state.parsed_query.positions
         statistics = state.parsed_query.statistics
         time_period = state.parsed_query.time_period
         filters = state.parsed_query.filters
         aggregation = state.parsed_query.aggregation
 
-        if not players:
+        if not players and not positions:
             raise ChatbotError(
                 error_type=ErrorStates.VALIDATION_ERROR,
-                message="No players specified in query",
+                message="No players or positions specified in query",
                 details={"parsed_query": state.parsed_query},
                 recoverable=True,
             )
 
         # Initialize router
-        datasource = NFLReadPyDataSource()
 
         # Retrieve data for each player
         all_data: list[pd.DataFrame] = []
 
+        # 1. Retrieve by Position
+        for position in positions:
+            if position not in POSITION_STATS_MAP:
+                logger.warning(f"Invalid position requested: {position}")
+                continue
+
+            try:
+                # Extract time period parameters
+                season = time_period.season
+                week = time_period.week
+                if week is None:
+                    specific_weeks = time_period.specific_weeks
+                    if specific_weeks:
+                        week = specific_weeks[0]
+
+                position_data = NFL_DATASOURCE.get_position_stats(
+                    position=position,
+                    season=season,
+                    week=week,
+                    stats=statistics if statistics else None,
+                )
+
+                # Normalize data format
+                position_data = normalize_data_format(position_data)
+
+                # Apply filters
+                if filters:
+                    position_data = apply_filters(position_data, filters)
+
+                all_data.append(position_data)
+
+            except Exception as e:
+                logger.error(f"Failed to retrieve data for position {position}: {e}")
+                continue
+
+        # 2. Retrieve by Player Name
         for player in players:
             try:
                 # Extract time period parameters
@@ -53,8 +93,7 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
                     if specific_weeks:
                         week = specific_weeks[0]
 
-                # Retrieve data with fallback
-                player_data = datasource.get_player_stats(
+                player_data = NFL_DATASOURCE.get_player_stats(
                     player_name=player,
                     season=season,
                     week=week,
@@ -78,9 +117,10 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
         if not all_data:
             raise ChatbotError(
                 error_type=ErrorStates.NO_DATA_FOUND,
-                message="No statistics found for the requested player(s)",
+                message="No statistics found for the requested player(s) or position(s)",
                 details={
                     "players": players,
+                    "positions": positions,
                     "season": time_period.season,
                     "week": time_period.week,
                 },
@@ -97,10 +137,11 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
             )
 
         # Store retrieved data in state
-        state.retrieved_data = combined_data
+        records = combined_data.to_dict(orient="records")
+        state.retrieved_data = [{str(k): v for k, v in record.items()} for record in records]
 
         logger.info(
-            f"Successfully retrieved {len(combined_data)} records for {len(players)} player(s)"
+            f"Successfully retrieved {len(combined_data)} records for {len(players)} player(s) and {len(positions)} position(s)"
         )
 
         return state
@@ -133,38 +174,14 @@ def retriever_node(state: ChatbotState) -> ChatbotState:
     try:
         state = retrieve_data_sync(state)
 
-        if state.retrieved_data is not None and not state.retrieved_data.empty:
+        if state.retrieved_data is not None and len(state.retrieved_data) > 0:
             logger.info(f"Retrieved {len(state.retrieved_data)} records")
         else:
             logger.warning("No data retrieved")
             if state.parsed_query:
-                # Create helpful error response
-                # context = {
-                #     "players": state.parsed_query.players,
-                #     "season": state.parsed_query.time_period.season,
-                # }
-                # error_response = create_error_response(ErrorStates.NO_DATA_FOUND, details=context)
-                # state.error = error_response["error"]
-                # state.generated_response = error_response["generated_response"]
                 state.error = ErrorStates.NO_DATA_FOUND
                 state.generated_response = "No statistics found for the requested player(s)."
-
-    # except ChatbotError as e:
-    #     # Handle known chatbot errors
-    #     error_info = handle_error(
-    #         e, context={"node": "retriever", "parsed_query": state.get("parsed_query", {})}
-    #     )
-    #     state.error = error_info["error_type"]
-    #     state.generated_response = error_info["user_message"]
     except Exception as e:
-        # Handle unexpected errors
-        # error_info = handle_error(
-        #     e,
-        #     context={"node": "retriever", "parsed_query": state.parsed_query},
-        #     default_error_type=ErrorStates.RETRIEVAL_ERROR,
-        # )
-        # state.error = error_info["error_type"]
-        # state.generated_response = error_info["user_message"]
         logger.error(f"Unexpected error in retriever node: {e}")
         state.error = ErrorStates.RETRIEVAL_ERROR
         state.generated_response = "An unexpected error occurred while retrieving data."

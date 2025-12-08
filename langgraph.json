@@ -1,7 +1,7 @@
 {
     "dockerfile_lines": [],
     "graphs": {
-      "sportsanalysisagent": "./sportsanalysisagent.py:agent"
+      "sportsanalysisagent": "./src/sportsagent/workflow.py:graph"
     },
     "python_version": "3.13",
     "env": ".env",
