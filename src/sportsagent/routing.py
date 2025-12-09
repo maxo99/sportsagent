@@ -77,7 +77,9 @@ def should_continue_after_retriever(state: ChatbotState) -> Literal["analyzer", 
 #     return "memory"
 
 
-def should_continue_after_analyzer(state: ChatbotState) -> Literal["approval", "visualization", "exit"]:
+def should_continue_after_analyzer(
+    state: ChatbotState,
+) -> Literal["approval", "visualization", "save_report", "exit"]:
     # Check for routing signal
     if state.generated_response and state.generated_response.startswith("__ROUTE_TO_RETRIEVER__"):
         logger.info("Analyzer -> Approval (request more data)")
@@ -90,5 +92,5 @@ def should_continue_after_analyzer(state: ChatbotState) -> Literal["approval", "
         logger.info("Analyzer -> Visualization")
         return "visualization"
 
-    logger.info("Analyzer -> Exit")
-    return "exit"
+    logger.info("Analyzer -> Save Report")
+    return "save_report"

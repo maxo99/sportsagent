@@ -107,6 +107,9 @@ def run_workflow(inputs=None):
             st.session_state["interrupt_state"] = "approval"
             st.session_state["approval_query"] = snapshot.values.get("user_query")
             st.rerun()
+        elif "save_report" in snapshot.next:
+            st.session_state["interrupt_state"] = "save_report"
+            st.rerun()
     else:
         # Workflow finished
         st.session_state["interrupt_state"] = None
@@ -184,6 +187,39 @@ elif st.session_state.get("interrupt_state") == "approval":
                     {"role": "assistant", "content": "Data retrieval cancelled."}
                 )
                 st.rerun()
+
+elif st.session_state.get("interrupt_state") == "save_report":
+    # Display the result BEFORE asking to save
+    # We need to get the current state to show the response/chart
+    config = st.session_state["workflow_config"]
+    snapshot = graph.get_state(config)
+    if snapshot.values:
+        response = snapshot.values.get("generated_response", "")
+        visualization = snapshot.values.get("visualization")
+
+        with st.chat_message("assistant"):
+            st.write(response)
+            if visualization:
+                if isinstance(visualization, dict):
+                    fig = plotly_from_dict(visualization)
+                    st.plotly_chart(fig)
+                else:
+                    st.plotly_chart(visualization)
+
+            st.write("---")
+            st.write("**Do you want to save this report?**")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Yes, Save Report"):
+                    st.session_state["interrupt_state"] = None
+                    with st.spinner("Saving report..."):
+                        run_workflow(None)
+            with col2:
+                if st.button("No, Skip"):
+                    st.session_state["interrupt_state"] = None
+                    config = st.session_state["workflow_config"]
+                    graph.update_state(config, {"skip_save": True})
+                    run_workflow(None)
 
 # Chat Input
 if prompt := st.chat_input("Ask me about NFL stats..."):

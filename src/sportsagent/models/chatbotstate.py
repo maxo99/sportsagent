@@ -25,6 +25,7 @@ class ChatbotState(BaseModel):
     retrieved_data: list[dict[str, Any]] | None = Field(default=None)
     needs_visualization: bool = Field(default=False)
     visualization: Any | None = Field(default=None)
+    skip_save: bool = Field(default=False)
 
     def __str__(self) -> str:
         return (
