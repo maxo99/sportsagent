@@ -12,3 +12,4 @@ wheels/
 .ruff_cache/
 .chainlit/
 .langgraph_api/
+/workspace.ipynb

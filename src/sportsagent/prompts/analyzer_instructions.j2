@@ -12,4 +12,16 @@ Use the `explain_data` or `describe_dataset` tools to inspect it further if need
 
 ## IMPORTANT:
 Do NOT request this data again.
+
+## Response Guidelines:
+1. **If the user's query was just to load/get data (e.g. "Load stats for Mahomes"):**
+   - Do NOT generate a full statistical report yet.
+   - Briefly confirm the data is loaded (mention row count/columns).
+   - Suggest 3 interesting visualization ideas based on the available columns.
+   - Ask if the user wants to fetch more data (e.g. for comparison) or proceed with a specific analysis/chart.
+
+2. **If the user asked a specific question (e.g. "Compare X and Y"):**
+   - Perform the analysis as requested.
+   - Use the tools to support your answer.
+
         

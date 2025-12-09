@@ -1,4 +1,6 @@
+import glob
 import re
+from urllib.request import urlretrieve
 
 import nflreadpy as nfl
 import pandas as pd
@@ -9,21 +11,23 @@ from sportsagent.constants import CURRENT_SEASON, POSITION_STATS_MAP, STAT_MAPPI
 logger = setup_logging(__name__)
 
 
-
 class NFLReadPyDataSource:
+    TEAM_COLORS: dict[str, list[str]]
+    TEAM_LOGO_PATHS: dict[str, str]
+    logos_preloaded = False
 
     def __init__(self) -> None:
         # # from nflreadpy.config import update_config
 
-    # # update_config(
-    # #     cache_mode="memory",
-    # #     cache_dir='~/.nflreadpy',
-    # #     cache_duration=86400,
-    # #     verbose=False,
-    # #     timeout=30,
-    # #     user_agent='nflreadpy/v0.1.1'
-    # # )
-
+        # # update_config(
+        # #     cache_mode="memory",
+        # #     cache_dir='~/.nflreadpy',
+        # #     cache_duration=86400,
+        # #     verbose=False,
+        # #     timeout=30,
+        # #     user_agent='nflreadpy/v0.1.1'
+        # # )
+        self.preload_teams_data()
         super().__init__()
 
     @property
@@ -132,7 +136,7 @@ class NFLReadPyDataSource:
                 result = result[columns_to_select]
 
             logger.info(
-                f"Retrieved dataframe with rows: {len(result)} cols: {list(result.columns)}"
+                f"Retrieved dataframe shape {result.shape} cols: {list(result.columns)}"
             )
             return result
 
@@ -145,6 +149,33 @@ class NFLReadPyDataSource:
         except Exception as e:
             logger.error(f"Error retrieving position stats from nflreadpy: {e}")
             raise Exception(f"Failed to retrieve position stats: {str(e)}") from e
+
+    def preload_teams_data(self) -> None:
+        try:
+            logger.info("Preloading teams data from nflreadpy")
+            teams = nfl.load_teams().to_pandas()
+
+            # If no .tif files exist in logos set logos_preloaded = True
+            logo_files = glob.glob("data/logos/*.tif")
+            if len(logo_files) >= len(teams):
+                self.logos_preloaded = True
+
+            for _, row in teams.iterrows():
+                team_abbr = row["team_abbr"]
+                colors = []
+                if pd.notna(row.get("team_color")):
+                    colors.append(row["team_color"])
+                if pd.notna(row.get("team_color2")):
+                    colors.append(row["team_color2"])
+                self.TEAM_COLORS[team_abbr] = colors
+
+                if not self.logos_preloaded:
+                    urlretrieve(row["team_logo_espn"], f"data/logos/{row['team_abbr']}.tif")
+                    self.TEAM_LOGO_PATHS[team_abbr] = f"data/logos/{row['team_abbr']}.tif"
+            self.logos_preloaded = True
+            logger.info("Teams data preloaded successfully")
+        except Exception as e:
+            logger.error(f"Error preloading teams data: {e}")
 
 
 def _filter_cols_for_position(df: pd.DataFrame) -> pd.DataFrame:

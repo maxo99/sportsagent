@@ -24,7 +24,9 @@ class ChatbotState(BaseModel):
     error: ErrorStates | None = Field(default=None)
     retrieved_data: list[dict[str, Any]] | None = Field(default=None)
     needs_visualization: bool = Field(default=False)
+    visualization_code: str | None = Field(default=None)
     visualization: Any | None = Field(default=None)
+    internal_trace: list[str] = Field(default_factory=list)
     skip_save: bool = Field(default=False)
 
     def __str__(self) -> str:

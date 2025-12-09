@@ -12,6 +12,7 @@ logger = setup_logging(__name__)
 def analyzer_node(state: ChatbotState) -> ChatbotState:
     logger.info("Generating insights using AnalyzerAgent")
 
+    analyzer_agent = None
     try:
         if state.error:
             logger.info("Analyzer Node exiting due to prior error")
@@ -38,6 +39,9 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             data_raw=df,
             session_id=state.session_id,
         )
+
+        # Capture execution trace
+        state.internal_trace = analyzer_agent.get_execution_trace()
 
         # Check for tool calls or fallback request string
         tool_calls = analyzer_agent.get_tool_calls()
@@ -68,6 +72,14 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
 
     except Exception as e:
         logger.error(f"Analyzer Node error: {e}", exc_info=True)
+
+        # Attempt to capture trace from partial execution
+        if "analyzer_agent" in locals() and analyzer_agent is not None:
+            try:
+                state.internal_trace = analyzer_agent.get_execution_trace()
+            except Exception:
+                logger.warning("Failed to retrieve partial trace from analyzer agent")
+
         state.error = ErrorStates.RESPONSE_GENERATION_ERROR
         state.generated_response = (
             "I'm sorry, but I'm currently unable to generate insights due to a technical issue. "

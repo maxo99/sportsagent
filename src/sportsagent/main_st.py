@@ -1,13 +1,14 @@
 import json
 import os
 import uuid
+
 import pandas as pd
 import streamlit as st
 
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.workflow import graph
 from sportsagent.utils import plotly_from_dict
+from sportsagent.workflow import graph
 
 logger = setup_logging(__name__)
 
@@ -33,6 +34,9 @@ if "messages" not in st.session_state:
 
 if "workflow_trace" not in st.session_state:
     st.session_state["workflow_trace"] = []
+
+if "retrieved_data" not in st.session_state:
+    st.session_state["retrieved_data"] = []
 
 # Sidebar
 st.sidebar.header("Debug Info")
@@ -79,6 +83,9 @@ def run_workflow(inputs=None):
         for node_name, node_state in chunk.items():
             logger.info(f"Executed node: {node_name}")
             st.session_state["workflow_trace"].append(node_name)
+            if "internal_trace" in node_state and node_state["internal_trace"]:
+                for trace_item in node_state["internal_trace"]:
+                    st.session_state["workflow_trace"].append(f"  {trace_item}")
             # Force sidebar update? st.rerun() might be too aggressive here.
             # We can use a placeholder if we want real-time updates, but sidebar is tricky.
             # For now, just appending to state. The sidebar will update on next rerun.
@@ -100,10 +107,14 @@ def run_workflow(inputs=None):
         data = snapshot.values["retrieved_data"]
         if data:
             st.session_state["current_dataframe"] = pd.DataFrame(data)
+            st.session_state["retrieved_data"] = data
 
     if snapshot.next:
-        if "visualization" in snapshot.next:
-            st.session_state["interrupt_state"] = "visualization"
+        if "generate_visualization" in snapshot.next:
+            st.session_state["interrupt_state"] = "generate_visualization"
+            st.rerun()
+        elif "execute_visualization" in snapshot.next:
+            st.session_state["interrupt_state"] = "execute_visualization"
             st.rerun()
         elif "approval" in snapshot.next:
             st.session_state["interrupt_state"] = "approval"
@@ -125,6 +136,7 @@ def process_final_result(final_state):
         data = final_state["retrieved_data"]
         if data:
             st.session_state["current_dataframe"] = pd.DataFrame(data)
+            st.session_state["retrieved_data"] = data
 
     response = final_state.get("generated_response", "")
     visualization = final_state.get("visualization")
@@ -167,7 +179,7 @@ def display_report(report_dir_name):
     # Check for markdown report
     md_path = os.path.join(report_path, "report.md")
     if os.path.exists(md_path):
-        with open(md_path, "r") as f:
+        with open(md_path) as f:
             content = f.read()
         st.markdown(content)
     else:
@@ -179,7 +191,7 @@ def display_report(report_dir_name):
 
     if os.path.exists(chart_json_path):
         try:
-            with open(chart_json_path, "r") as f:
+            with open(chart_json_path) as f:
                 fig_dict = json.load(f)
             fig = plotly_from_dict(fig_dict)
             st.plotly_chart(fig)
@@ -200,25 +212,46 @@ with tab_chat:
     display_chat_history()
 
     # Handle Interrupts
-    if st.session_state.get("interrupt_state") == "visualization":
+    if st.session_state.get("interrupt_state") == "generate_visualization":
         with st.chat_message("assistant"):
             st.write("I can generate a visualization for this. Do you want me to proceed?")
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Yes, generate chart"):
                     st.session_state["interrupt_state"] = None
-                    with st.spinner("Generating visualization..."):
+                    with st.spinner("Generating visualization code..."):
                         run_workflow(None)  # Resume
             with col2:
                 if st.button("No, skip"):
                     st.session_state["interrupt_state"] = None
-                    # TODO: Handle skip logic (might need a way to inject a "skip" signal or just break)
-                    # For now, we just resume and let the node handle it (or we might need to update state)
-                    # In main_cl.py we just break. Here we probably want to just resume but maybe set needs_visualization=False?
-                    # Actually, if we resume without updating state, it will just try to run visualization_node again.
-                    # We need to update the state to skip visualization.
                     config = st.session_state["workflow_config"]
                     graph.update_state(config, {"needs_visualization": False})
+                    run_workflow(None)
+
+    elif st.session_state.get("interrupt_state") == "execute_visualization":
+        # Get the generated code from state
+        config = st.session_state["workflow_config"]
+        snapshot = graph.get_state(config)
+        code = snapshot.values.get("visualization_code", "")
+
+        with st.chat_message("assistant"):
+            st.write("Here is the code I generated to create the chart. Please review it:")
+            st.code(code, language="python")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Execute Code"):
+                    st.session_state["interrupt_state"] = None
+                    with st.spinner("Executing visualization..."):
+                        run_workflow(None)
+            with col2:
+                if st.button("Cancel"):
+                    st.session_state["interrupt_state"] = None
+                    # Skip execution by updating state or just resuming with a flag?
+                    # If we just resume, it will run execute_visualization_node.
+                    # We should probably clear the code or set a flag to skip execution.
+                    # Let's clear the code so the node sees None and skips.
+                    graph.update_state(config, {"visualization_code": None})
                     run_workflow(None)
 
     elif st.session_state.get("interrupt_state") == "approval":
@@ -276,11 +309,20 @@ with tab_chat:
     if prompt := st.chat_input("Ask me about NFL stats..."):
         st.session_state["messages"].append({"role": "user", "content": prompt})
 
+        # Sanitize conversation history for state (remove non-serializable elements like Plotly figures)
+        sanitized_history = []
+        for msg in st.session_state["messages"]:
+            clean_msg = msg.copy()
+            if "elements" in clean_msg:
+                del clean_msg["elements"]
+            sanitized_history.append(clean_msg)
+
         initial_state = ChatbotState(
             session_id=st.session_state["session_id"],
             user_query=prompt,
             generated_response="",
-            conversation_history=[],  # We could populate this from st.session_state["messages"] if needed
+            conversation_history=sanitized_history,
+            retrieved_data=st.session_state["retrieved_data"],
         )
 
         with st.spinner("Thinking..."):

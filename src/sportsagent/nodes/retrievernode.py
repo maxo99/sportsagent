@@ -42,77 +42,74 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
                 recoverable=True,
             )
 
-        # Initialize router
 
-        # Retrieve data for each player
         all_data: list[pd.DataFrame] = []
+        # Retrieve data for each player
+        if positions is not None and len(positions) > 0:
+            for position in positions:
+                if position not in POSITION_STATS_MAP:
+                    logger.warning(f"Invalid position requested: {position}")
+                    continue
 
-        # 1. Retrieve by Position
-        for position in positions:
-            if position not in POSITION_STATS_MAP:
-                logger.warning(f"Invalid position requested: {position}")
-                continue
+                try:
+                    # Extract time period parameters
+                    season = time_period.season
+                    week = time_period.week
+                    if week is None:
+                        specific_weeks = time_period.specific_weeks
+                        if specific_weeks:
+                            week = specific_weeks[0]
 
-            try:
-                # Extract time period parameters
-                season = time_period.season
-                week = time_period.week
-                if week is None:
-                    specific_weeks = time_period.specific_weeks
-                    if specific_weeks:
-                        week = specific_weeks[0]
+                    position_data = NFL_DATASOURCE.get_position_stats(
+                        position=position,
+                        season=season,
+                        week=week,
+                        stats=statistics if statistics else None,
+                    )
 
-                position_data = NFL_DATASOURCE.get_position_stats(
-                    position=position,
-                    season=season,
-                    week=week,
-                    stats=statistics if statistics else None,
-                )
+                    # Normalize data format
+                    # position_data = normalize_data_format(position_data)
 
-                # Normalize data format
-                position_data = normalize_data_format(position_data)
+                    # Apply filters
+                    if filters:
+                        position_data = apply_filters(position_data, filters)
 
-                # Apply filters
-                if filters:
-                    position_data = apply_filters(position_data, filters)
+                    all_data.append(position_data)
 
-                all_data.append(position_data)
+                except Exception as e:
+                    logger.error(f"Failed to retrieve data for position {position}: {e}")
+                    continue
+        elif players is not None and len(players) > 0:
+            for player in players:
+                try:
+                    # Extract time period parameters
+                    season = time_period.season
+                    week = time_period.week
+                    if week is None:
+                        specific_weeks = time_period.specific_weeks
+                        if specific_weeks:
+                            week = specific_weeks[0]
 
-            except Exception as e:
-                logger.error(f"Failed to retrieve data for position {position}: {e}")
-                continue
+                    player_data = NFL_DATASOURCE.get_player_stats(
+                        player_name=player,
+                        season=season,
+                        week=week,
+                        stats=statistics if statistics else None,
+                    )
 
-        # 2. Retrieve by Player Name
-        for player in players:
-            try:
-                # Extract time period parameters
-                season = time_period.season
-                week = time_period.week
-                if week is None:
-                    specific_weeks = time_period.specific_weeks
-                    if specific_weeks:
-                        week = specific_weeks[0]
+                    # Normalize data format
+                    # player_data = normalize_data_format(player_data)
 
-                player_data = NFL_DATASOURCE.get_player_stats(
-                    player_name=player,
-                    season=season,
-                    week=week,
-                    stats=statistics if statistics else None,
-                )
+                    # Apply filters
+                    if filters:
+                        player_data = apply_filters(player_data, filters)
 
-                # Normalize data format
-                player_data = normalize_data_format(player_data)
+                    all_data.append(player_data)
 
-                # Apply filters
-                if filters:
-                    player_data = apply_filters(player_data, filters)
-
-                all_data.append(player_data)
-
-            except Exception as e:
-                logger.error(f"Failed to retrieve data for {player}: {e}")
-                # Continue with other players
-                continue
+                except Exception as e:
+                    logger.error(f"Failed to retrieve data for {player}: {e}")
+                    # Continue with other players
+                    continue
 
         if not all_data:
             raise ChatbotError(
@@ -240,25 +237,25 @@ def normalize_data_format(df: pd.DataFrame) -> pd.DataFrame:
     result = df.copy()
 
     # Standardize column names
-    column_mapping = {
-        "player": "player_name",
-        "year": "season",
-        "tm": "team",
-        "pos": "position",
-        "pass_yds": "passing_yards",
-        "pass_td": "passing_touchdowns",
-        "rush_yds": "rushing_yards",
-        "rush_td": "rushing_touchdowns",
-        "rec_yds": "receiving_yards",
-        "rec_td": "receiving_touchdowns",
-        "rec": "receptions",
-        "tgt": "targets",
-        "att": "attempts",
-        "cmp": "completions",
-        "int": "interceptions",
-    }
+    # column_mapping = {
+    #     "player": "player_name",
+    #     "year": "season",
+    #     "tm": "team",
+    #     "pos": "position",
+    #     "pass_yds": "passing_yards",
+    #     "pass_td": "passing_touchdowns",
+    #     "rush_yds": "rushing_yards",
+    #     "rush_td": "rushing_touchdowns",
+    #     "rec_yds": "receiving_yards",
+    #     "rec_td": "receiving_touchdowns",
+    #     "rec": "receptions",
+    #     "tgt": "targets",
+    #     "att": "attempts",
+    #     "cmp": "completions",
+    #     "int": "interceptions",
+    # }
 
-    result = result.rename(columns=column_mapping)
+    # result = result.rename(columns=column_mapping)
 
     # Ensure numeric columns are proper type
     numeric_columns = [

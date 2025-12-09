@@ -9,9 +9,9 @@ from sportsagent.utils import get_prompt_template
 logger = setup_logging(__name__)
 
 
-def visualization_node(state: ChatbotState) -> ChatbotState:
+def generate_visualization_node(state: ChatbotState) -> ChatbotState:
     """
-    Node that handles data visualization if requested.
+    Node that generates visualization code but does not execute it.
     """
     if not state.needs_visualization:
         return state
@@ -20,7 +20,7 @@ def visualization_node(state: ChatbotState) -> ChatbotState:
         logger.warning("Visualization requested but no data available.")
         return state
 
-    logger.info("Generating visualization...")
+    logger.info("Generating visualization code...")
 
     try:
         # Prepare data summary
@@ -46,11 +46,30 @@ def visualization_node(state: ChatbotState) -> ChatbotState:
         code = code.replace("```python", "").replace("```", "").strip()
 
         logger.info(f"Generated visualization code:\n{code}")
+        state.visualization_code = code
 
-        # Execute code
+    except Exception as e:
+        logger.error(f"Visualization generation failed: {e}")
+
+    return state
+
+
+def execute_visualization_node(state: ChatbotState) -> ChatbotState:
+    """
+    Node that executes the generated visualization code.
+    """
+    if not state.visualization_code:
+        logger.warning("No visualization code to execute.")
+        return state
+
+    logger.info("Executing visualization code...")
+
+    try:
+        df = pd.DataFrame(state.retrieved_data)
         local_vars = {}
+
         try:
-            exec(code, {}, local_vars)
+            exec(state.visualization_code, {}, local_vars)
             generate_plot = local_vars.get("generate_plot")
 
             if generate_plot and callable(generate_plot):
@@ -77,6 +96,6 @@ def visualization_node(state: ChatbotState) -> ChatbotState:
             logger.error(f"Error executing visualization code: {exec_error}")
 
     except Exception as e:
-        logger.error(f"Visualization failed: {e}")
+        logger.error(f"Visualization execution failed: {e}")
 
     return state

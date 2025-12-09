@@ -99,24 +99,41 @@ class AnalyzerAgent(BaseAgent):
             The input data as a DataFrame.
         """
 
-        response = self._compiled_graph.invoke(
-            input={
-                "messages": [HumanMessage(content=user_instructions)] if user_instructions else [],
-                "user_instructions": user_instructions,
-                "data_raw": data_raw.to_dict() if data_raw is not None else None,
-            },
-            config={
-                "configurable": {"thread_id": session_id or settings.DEFAULT_SESSION},
-            },
-            **kwargs,
-        )
-        self.response = response
+        last_state = None
+        try:
+            # Use stream to capture state incrementally
+            for state in self._compiled_graph.stream(
+                input={
+                    "messages": [HumanMessage(content=user_instructions)]
+                    if user_instructions
+                    else [],
+                    "user_instructions": user_instructions,
+                    "data_raw": data_raw.to_dict() if data_raw is not None else None,
+                },
+                config={
+                    "configurable": {"thread_id": session_id or settings.DEFAULT_SESSION},
+                },
+                stream_mode="values",
+                **kwargs,
+            ):
+                last_state = state
+
+            self.response = last_state
+
+        except Exception as e:
+            logger.error(f"Agent execution failed: {e}")
+            if last_state:
+                self.response = last_state
+            raise e
+
         return None
 
     def get_internal_messages(self, markdown: bool = False):
         """
         Returns internal messages from the agent response.
         """
+        if not self.response:
+            return []
         messages = self.response.get("internal_messages", [])
         if not messages:
             messages = self.response.get("messages", [])
@@ -136,6 +153,8 @@ class AnalyzerAgent(BaseAgent):
         """
         Returns the EDA artifacts from the agent response.
         """
+        if not self.response:
+            return None
         if as_dataframe:
             return pd.DataFrame(self.response["eda_artifacts"])
         else:
@@ -145,6 +164,8 @@ class AnalyzerAgent(BaseAgent):
         """
         Returns the AI message from the agent response.
         """
+        if not self.response:
+            return ""
         messages = self.response.get("messages", [])
         content = messages[-1].content if messages else ""
 
@@ -164,3 +185,25 @@ class AnalyzerAgent(BaseAgent):
             return get_tool_call_names(self.response["messages"])
 
         return []
+
+    def get_execution_trace(self) -> list[str]:
+        """
+        Returns a formatted trace of the agent's execution.
+        """
+        messages = self.get_internal_messages()
+        trace = []
+        for msg in messages:
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                for tool_call in msg.tool_calls:
+                    trace.append(f"🛠️ Tool Call: {tool_call['name']}")
+            elif msg.type == "tool":
+                # content = str(msg.content)[:50] + "..." if len(str(msg.content)) > 50 else str(msg.content)
+                trace.append(f"✅ Tool Output: {msg.name}")
+            elif msg.type == "ai":
+                # content = str(msg.content)[:50] + "..." if len(str(msg.content)) > 50 else str(msg.content)
+                # trace.append(f"🤖 Agent: {content}")
+                pass  # Skip raw AI messages to avoid clutter, or maybe show them?
+                # The user wants "internal tool calls ... same as other node paths"
+                # Node paths are just names.
+                # So "Tool Call: name" is good.
+        return trace
