@@ -1,3 +1,5 @@
+import json
+import os
 import uuid
 import pandas as pd
 import streamlit as st
@@ -142,98 +144,158 @@ def process_final_result(final_state):
     st.rerun()
 
 
+def load_reports():
+    """Loads list of available reports."""
+    reports_dir = os.path.join("data", "outputs")
+    if not os.path.exists(reports_dir):
+        return []
+
+    reports = []
+    for entry in os.scandir(reports_dir):
+        if entry.is_dir() and entry.name.startswith("report_"):
+            reports.append(entry.name)
+
+    # Sort by name (which includes timestamp) descending
+    reports.sort(reverse=True)
+    return reports
+
+
+def display_report(report_dir_name):
+    """Displays the content of a selected report."""
+    report_path = os.path.join("data", "outputs", report_dir_name)
+
+    # Check for markdown report
+    md_path = os.path.join(report_path, "report.md")
+    if os.path.exists(md_path):
+        with open(md_path, "r") as f:
+            content = f.read()
+        st.markdown(content)
+    else:
+        st.warning("No report.md found in this directory.")
+
+    # Check for chart
+    chart_json_path = os.path.join(report_path, "chart.json")
+    chart_png_path = os.path.join(report_path, "chart.png")
+
+    if os.path.exists(chart_json_path):
+        try:
+            with open(chart_json_path, "r") as f:
+                fig_dict = json.load(f)
+            fig = plotly_from_dict(fig_dict)
+            st.plotly_chart(fig)
+        except Exception as e:
+            st.error(f"Error loading interactive chart: {e}")
+    elif os.path.exists(chart_png_path):
+        st.image(chart_png_path, caption="Chart")
+
+
 # =============================================================================
 # MAIN UI
 # =============================================================================
 
-display_chat_history()
+# Tabs
+tab_chat, tab_review = st.tabs(["Chat", "Review Reports"])
 
-# Handle Interrupts
-if st.session_state.get("interrupt_state") == "visualization":
-    with st.chat_message("assistant"):
-        st.write("I can generate a visualization for this. Do you want me to proceed?")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Yes, generate chart"):
-                st.session_state["interrupt_state"] = None
-                with st.spinner("Generating visualization..."):
-                    run_workflow(None)  # Resume
-        with col2:
-            if st.button("No, skip"):
-                st.session_state["interrupt_state"] = None
-                # TODO: Handle skip logic (might need a way to inject a "skip" signal or just break)
-                # For now, we just resume and let the node handle it (or we might need to update state)
-                # In main_cl.py we just break. Here we probably want to just resume but maybe set needs_visualization=False?
-                # Actually, if we resume without updating state, it will just try to run visualization_node again.
-                # We need to update the state to skip visualization.
-                config = st.session_state["workflow_config"]
-                graph.update_state(config, {"needs_visualization": False})
-                run_workflow(None)
+with tab_chat:
+    display_chat_history()
 
-elif st.session_state.get("interrupt_state") == "approval":
-    query = st.session_state.get("approval_query", "unknown")
-    with st.chat_message("assistant"):
-        st.write(f"I need to fetch more data for: '{query}'. Do you approve?")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Yes, fetch data"):
-                st.session_state["interrupt_state"] = None
-                with st.spinner(f"Fetching data for {query}..."):
-                    run_workflow(None)
-        with col2:
-            if st.button("No, stop"):
-                st.session_state["interrupt_state"] = None
-                st.session_state["messages"].append(
-                    {"role": "assistant", "content": "Data retrieval cancelled."}
-                )
-                st.rerun()
-
-elif st.session_state.get("interrupt_state") == "save_report":
-    # Display the result BEFORE asking to save
-    # We need to get the current state to show the response/chart
-    config = st.session_state["workflow_config"]
-    snapshot = graph.get_state(config)
-    if snapshot.values:
-        response = snapshot.values.get("generated_response", "")
-        visualization = snapshot.values.get("visualization")
-
+    # Handle Interrupts
+    if st.session_state.get("interrupt_state") == "visualization":
         with st.chat_message("assistant"):
-            st.write(response)
-            if visualization:
-                if isinstance(visualization, dict):
-                    fig = plotly_from_dict(visualization)
-                    st.plotly_chart(fig)
-                else:
-                    st.plotly_chart(visualization)
-
-            st.write("---")
-            st.write("**Do you want to save this report?**")
+            st.write("I can generate a visualization for this. Do you want me to proceed?")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("Yes, Save Report"):
+                if st.button("Yes, generate chart"):
                     st.session_state["interrupt_state"] = None
-                    with st.spinner("Saving report..."):
-                        run_workflow(None)
+                    with st.spinner("Generating visualization..."):
+                        run_workflow(None)  # Resume
             with col2:
-                if st.button("No, Skip"):
+                if st.button("No, skip"):
                     st.session_state["interrupt_state"] = None
+                    # TODO: Handle skip logic (might need a way to inject a "skip" signal or just break)
+                    # For now, we just resume and let the node handle it (or we might need to update state)
+                    # In main_cl.py we just break. Here we probably want to just resume but maybe set needs_visualization=False?
+                    # Actually, if we resume without updating state, it will just try to run visualization_node again.
+                    # We need to update the state to skip visualization.
                     config = st.session_state["workflow_config"]
-                    graph.update_state(config, {"skip_save": True})
+                    graph.update_state(config, {"needs_visualization": False})
                     run_workflow(None)
 
-# Chat Input
-if prompt := st.chat_input("Ask me about NFL stats..."):
-    st.session_state["messages"].append({"role": "user", "content": prompt})
+    elif st.session_state.get("interrupt_state") == "approval":
+        query = st.session_state.get("approval_query", "unknown")
+        with st.chat_message("assistant"):
+            st.write(f"I need to fetch more data for: '{query}'. Do you approve?")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Yes, fetch data"):
+                    st.session_state["interrupt_state"] = None
+                    with st.spinner(f"Fetching data for {query}..."):
+                        run_workflow(None)
+            with col2:
+                if st.button("No, stop"):
+                    st.session_state["interrupt_state"] = None
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": "Data retrieval cancelled."}
+                    )
+                    st.rerun()
 
-    initial_state = ChatbotState(
-        session_id=st.session_state["session_id"],
-        user_query=prompt,
-        generated_response="",
-        conversation_history=[],  # We could populate this from st.session_state["messages"] if needed
-    )
+    elif st.session_state.get("interrupt_state") == "save_report":
+        # Display the result BEFORE asking to save
+        # We need to get the current state to show the response/chart
+        config = st.session_state["workflow_config"]
+        snapshot = graph.get_state(config)
+        if snapshot.values:
+            response = snapshot.values.get("generated_response", "")
+            visualization = snapshot.values.get("visualization")
 
-    with st.spinner("Thinking..."):
-        run_workflow(initial_state)
+            with st.chat_message("assistant"):
+                st.write(response)
+                if visualization:
+                    if isinstance(visualization, dict):
+                        fig = plotly_from_dict(visualization)
+                        st.plotly_chart(fig)
+                    else:
+                        st.plotly_chart(visualization)
+
+                st.write("---")
+                st.write("**Do you want to save this report?**")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Yes, Save Report"):
+                        st.session_state["interrupt_state"] = None
+                        with st.spinner("Saving report..."):
+                            run_workflow(None)
+                with col2:
+                    if st.button("No, Skip"):
+                        st.session_state["interrupt_state"] = None
+                        config = st.session_state["workflow_config"]
+                        graph.update_state(config, {"skip_save": True})
+                        run_workflow(None)
+
+    # Chat Input
+    if prompt := st.chat_input("Ask me about NFL stats..."):
+        st.session_state["messages"].append({"role": "user", "content": prompt})
+
+        initial_state = ChatbotState(
+            session_id=st.session_state["session_id"],
+            user_query=prompt,
+            generated_response="",
+            conversation_history=[],  # We could populate this from st.session_state["messages"] if needed
+        )
+
+        with st.spinner("Thinking..."):
+            run_workflow(initial_state)
+
+with tab_review:
+    st.header("Review Saved Reports")
+    reports = load_reports()
+    if reports:
+        selected_report = st.selectbox("Select a report", reports)
+        if selected_report:
+            st.divider()
+            display_report(selected_report)
+    else:
+        st.info("No reports found.")
 
 # Debug / Data View
 if "current_dataframe" in st.session_state:
