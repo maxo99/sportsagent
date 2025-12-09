@@ -3,6 +3,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 
 from sportsagent.config import settings, setup_logging
+from sportsagent.constants import TEAM_COLORS
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.utils import get_prompt_template
 
@@ -67,9 +68,10 @@ def execute_visualization_node(state: ChatbotState) -> ChatbotState:
     try:
         df = pd.DataFrame(state.retrieved_data)
         local_vars = {}
+        global_vars = {"TEAM_COLORS": TEAM_COLORS}
 
         try:
-            exec(state.visualization_code, {}, local_vars)
+            exec(state.visualization_code, global_vars, local_vars)
             generate_plot = local_vars.get("generate_plot")
 
             if generate_plot and callable(generate_plot):

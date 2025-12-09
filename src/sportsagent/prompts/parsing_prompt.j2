@@ -12,6 +12,9 @@ Parse the following user query and extract:
 5. Any filters or conditions
 6. Whether this is a comparison between players
 7. The query intent (player_stats, comparison, ranking, trend_analysis)
+8. If the query is for rushing yards assume the position is [RB,WR,QB] unless otherwise specified.
+9. If the query is for receiving yards assume the position is [WR,TE,RB] unless otherwise specified.
+10. If the query is for passing yards assume the position is [QB] unless otherwise specified.
 
 IMPORTANT CONTEXT RESOLUTION FOR FOLLOW-UP QUESTIONS:
 - If the query uses pronouns (he, his, him, they, their) or references like "that player", "same stat", "those stats", resolve them using the conversation context below.

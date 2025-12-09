@@ -15,6 +15,8 @@ Requirements:
 5. Do NOT use `fig.show()`.
 6. Do NOT include any markdown formatting (like ```python).
 7. The code should be a valid Python code block.
+8. You have access to a global variable `TEAM_COLORS` which is a dictionary mapping team abbreviations (e.g., 'KC', 'BUF') to hex colors. Use this to color the chart elements by team if applicable (e.g. `color='team', color_discrete_map=TEAM_COLORS`).
+9. Do NOT define `TEAM_COLORS` yourself. It is already defined in the global scope. Defining it will overwrite the complete list with your partial list.
 
 Example structure:
 

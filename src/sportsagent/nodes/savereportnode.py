@@ -74,6 +74,10 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
                 report_content.append(f"Interactive chart: [{chart_filename}]({chart_filename})\n")
             report_content.append("![Chart](chart.png)\n")
 
+        if state.visualization_code:
+            report_content.append("## Visualization Code")
+            report_content.append(f"```python\n{state.visualization_code}\n```\n")
+
         report_content.append("## Chat History")
         for msg in state.messages:
             role = msg.type if hasattr(msg, "type") else "unknown"
