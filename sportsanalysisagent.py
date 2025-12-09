@@ -1,3 +1,0 @@
-from sportsagent.sports_analysis_agent import create_sportsanalysis_assistant
-
-agent = create_sportsanalysis_assistant(langgraph_platform=True)
