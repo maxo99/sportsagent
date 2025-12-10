@@ -27,6 +27,8 @@ class NFLReadPyDataSource:
         # #     timeout=30,
         # #     user_agent='nflreadpy/v0.1.1'
         # # )
+        self.TEAM_COLORS = {}
+        self.TEAM_LOGO_PATHS = {}
         self.preload_teams_data()
         super().__init__()
 
@@ -135,9 +137,7 @@ class NFLReadPyDataSource:
                 columns_to_select = list(set(available_key_cols + available_stats))
                 result = result[columns_to_select]
 
-            logger.info(
-                f"Retrieved dataframe shape {result.shape} cols: {list(result.columns)}"
-            )
+            logger.info(f"Retrieved dataframe shape {result.shape} cols: {list(result.columns)}")
             return result
 
         except ValueError as e:

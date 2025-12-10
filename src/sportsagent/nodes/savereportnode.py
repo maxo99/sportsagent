@@ -20,13 +20,21 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
 
     # Create report directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Simple slug from query (first 20 chars, safe chars only)
-    slug = (
-        "".join(c for c in state.user_query[:20] if c.isalnum() or c in (" ", "_", "-"))
-        .strip()
-        .replace(" ", "_")
-    )
-    report_dir_name = f"report_{timestamp}_{slug}"
+
+    if state.parsed_query:
+        slug = state.parsed_query.queryName
+    else:
+        # Simple slug from query (first 20 chars, safe chars only)
+        slug = (
+            "".join(c for c in state.user_query[:20] if c.isalnum() or c in (" ", "_", "-"))
+            .strip()
+            .replace(" ", "_")
+        )
+
+    # Ensure slug isn't too long
+    slug = slug[:100]
+
+    report_dir_name = f"{timestamp}_{slug}"
     report_dir = os.path.join("data", "outputs", report_dir_name)
 
     try:

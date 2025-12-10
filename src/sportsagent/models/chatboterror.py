@@ -1,6 +1,11 @@
 from enum import StrEnum
 from typing import Any
 
+UNKNOWN_ERROR_RESPONSE = (
+    "I'm sorry, but I'm currently unable to generate insights due to a technical issue. "
+    "Please try again later."
+)
+
 
 class ErrorStates(StrEnum):
     EMPTY_QUERY = "empty_query"
@@ -14,6 +19,7 @@ class ErrorStates(StrEnum):
     WORKFLOW_ERROR = "workflow_error"
     LLM_TIMEOUT = "llm_timeout"
     UNKNOWN_ERROR = "unknown_error"
+
 
 class ChatbotError(Exception):
     def __init__(

@@ -2,7 +2,10 @@ import logging
 import sys
 from pathlib import Path
 
+import dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+dotenv.load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -17,9 +20,8 @@ class Settings(BaseSettings):
     ENABLE_CHECKPOINTING: bool = False
     DEFAULT_SESSION: str = "default_session"
     SAVE_HTML: bool = False
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
 
 settings = Settings()
 

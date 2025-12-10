@@ -59,3 +59,35 @@ class ParsedQuery(BaseModel):
         default="player_stats",
         description="Intent: 'player_stats', 'comparison', 'ranking', 'trend_analysis'",
     )
+
+    @property
+    def queryName(self) -> str:
+        """
+        Returns a concise name for the type of query based on intent.
+        """
+        parts = []
+
+        # Helper to clean strings for filenames
+        def clean(s: str) -> str:
+            return "".join(c for c in s if c.isalnum()).strip()
+
+        if self.players:
+            # Limit to 3 players to keep name short
+            parts.append("-".join(clean(p) for p in self.players[:3]))
+            if len(self.players) > 3:
+                parts.append(f"and_{len(self.players)-3}_more")
+
+        if self.teams:
+            parts.append("-".join(clean(t) for t in self.teams[:3]))
+
+        if self.statistics:
+            # Limit to 2 stats
+            parts.append("-".join(clean(s) for s in self.statistics[:2]))
+
+        if self.time_period.season:
+            parts.append(f"s{self.time_period.season}")
+
+        if self.comparison:
+            parts.append("comp")
+
+        return "_".join(parts) or "general_query"

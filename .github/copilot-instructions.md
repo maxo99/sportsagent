@@ -21,5 +21,3 @@
 -  Use f-strings for string formatting.
 
 
-## Project Notes
-- deepagent implementation is deprecated and current focus is langgraph implementation starting from main_st.py
