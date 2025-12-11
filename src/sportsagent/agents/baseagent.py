@@ -18,11 +18,15 @@ class BaseAgent:
         recursion_limit: int = 5,
         **kwargs,
     ) -> CompiledStateGraph:
+        checkpointer = kwargs.pop("checkpointer", None)
+        if checkpointer is None and settings.ENABLE_CHECKPOINTING:
+            checkpointer = InMemorySaver()
+
         agent = create_agent(
             model=settings.LLM_MODEL,
             tools=self.tools,
             system_prompt=SystemMessage(content=self.systemMessage),
-            checkpointer=InMemorySaver() if settings.ENABLE_CHECKPOINTING else None,
+            checkpointer=checkpointer,
             **kwargs,
         ).with_config({"recursion_limit": recursion_limit})
         return agent

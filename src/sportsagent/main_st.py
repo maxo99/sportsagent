@@ -8,7 +8,7 @@ import streamlit as st
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.utils import plotly_from_dict
-from sportsagent.workflow import graph
+from sportsagent.workflow import compile_workflow
 
 logger = setup_logging(__name__)
 
@@ -66,15 +66,18 @@ def run_workflow(inputs=None):
     """Runs the workflow, handling interrupts for visualization and approval."""
 
     config = st.session_state["workflow_config"]
+    # Add metadata for tracing/debugging
+    config["metadata"] = {
+        "source": "streamlit",
+        "session_id": st.session_state["session_id"],
+    }
 
     # If inputs is None, we are resuming
     if inputs is None:
-        logger.info("Resuming workflow...")
-        # Clear trace on new run if not resuming? No, keep history or clear?
-        # Let's append to existing trace for the session
+        config["run_name"] = "Resume Workflow (Save Report)"
         stream = graph.stream(None, config=config, stream_mode="updates")
     else:
-        logger.info("Starting workflow...")
+        config["run_name"] = "Start Workflow"
         st.session_state["workflow_trace"] = []  # Clear trace for new query
         stream = graph.stream(inputs, config=config, stream_mode="updates")
 
@@ -82,25 +85,16 @@ def run_workflow(inputs=None):
     for chunk in stream:
         for node_name, node_state in chunk.items():
             logger.info(f"Executed node: {node_name}")
+            # Update sidebar trace
             st.session_state["workflow_trace"].append(node_name)
             if "internal_trace" in node_state and node_state["internal_trace"]:
                 for trace_item in node_state["internal_trace"]:
                     st.session_state["workflow_trace"].append(f"  {trace_item}")
-            # Force sidebar update? st.rerun() might be too aggressive here.
-            # We can use a placeholder if we want real-time updates, but sidebar is tricky.
-            # For now, just appending to state. The sidebar will update on next rerun.
-            final_state = node_state  # Keep track of the latest state
 
-    # If stream finishes, we have the final state in final_state (or we need to get it)
-    # Actually, graph.stream yields updates. The last update might not be the full state.
-    # It's safer to get the state at the end.
+    # Graph.stream yields updates, so we fetch the full state at the end.
 
-    # Check state after invoke (it might be paused)
     snapshot = graph.get_state(config)
-    result = snapshot.values  # This effectively becomes our result/final_state
-
-    # Check state after invoke (it might be paused)
-    snapshot = graph.get_state(config)
+    result = snapshot.values
 
     # Update sidebar data from snapshot
     if snapshot.values and "retrieved_data" in snapshot.values:
@@ -201,6 +195,13 @@ def display_report(report_dir_name):
         st.image(chart_png_path, caption="Chart")
 
 
+# Compile graph
+@st.cache_resource
+def get_graph():
+    return compile_workflow(langgraph_platform=False)
+
+graph = get_graph()
+
 # =============================================================================
 # MAIN UI
 # =============================================================================
@@ -247,10 +248,7 @@ with tab_chat:
             with col2:
                 if st.button("Cancel"):
                     st.session_state["interrupt_state"] = None
-                    # Skip execution by updating state or just resuming with a flag?
-                    # If we just resume, it will run execute_visualization_node.
-                    # We should probably clear the code or set a flag to skip execution.
-                    # Let's clear the code so the node sees None and skips.
+                    # Skip execution by updating state
                     graph.update_state(config, {"visualization_code": None})
                     run_workflow(None)
 
@@ -273,8 +271,6 @@ with tab_chat:
                     st.rerun()
 
     elif st.session_state.get("interrupt_state") == "save_report":
-        # Display the result BEFORE asking to save
-        # We need to get the current state to show the response/chart
         config = st.session_state["workflow_config"]
         snapshot = graph.get_state(config)
         if snapshot.values:

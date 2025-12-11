@@ -186,7 +186,7 @@ class AnalyzerAgent(BaseAgent):
 
         return []
 
-    def get_execution_trace(self) -> list[str]:
+    def get_execution_trace(self, show_ai: bool = False) -> list[str]:
         """
         Returns a formatted trace of the agent's execution.
         """
@@ -200,10 +200,11 @@ class AnalyzerAgent(BaseAgent):
                 # content = str(msg.content)[:50] + "..." if len(str(msg.content)) > 50 else str(msg.content)
                 trace.append(f"✅ Tool Output: {msg.name}")
             elif msg.type == "ai":
-                # content = str(msg.content)[:50] + "..." if len(str(msg.content)) > 50 else str(msg.content)
-                # trace.append(f"🤖 Agent: {content}")
-                pass  # Skip raw AI messages to avoid clutter, or maybe show them?
-                # The user wants "internal tool calls ... same as other node paths"
-                # Node paths are just names.
-                # So "Tool Call: name" is good.
+                if show_ai:
+                    content = (
+                        str(msg.content)[:50] + "..."
+                        if len(str(msg.content)) > 50
+                        else str(msg.content)
+                    )
+                    trace.append(f"🤖 Agent: {content}")
         return trace

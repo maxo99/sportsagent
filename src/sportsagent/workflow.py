@@ -1,19 +1,20 @@
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
+from langgraph.store.memory import InMemoryStore
 
 from sportsagent import routing
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
 
 # from sportsagent.nodes.memorynode import memory_node
-from sportsagent.nodes.analyzernode import analyzer_node
+from sportsagent.nodes.analyzernode import analyzer_node, set_analyzeragent
 from sportsagent.nodes.approvalnode import approval_node
 from sportsagent.nodes.entrynode import entry_node
 from sportsagent.nodes.exitnode import exit_node
 from sportsagent.nodes.queryparsernode import query_parser_node
 from sportsagent.nodes.retrievernode import retriever_node
 from sportsagent.nodes.savereportnode import save_report_node
-
 from sportsagent.nodes.visualizationnode import (
     execute_visualization_node,
     generate_visualization_node,
@@ -84,21 +85,40 @@ def create_workflow() -> StateGraph:
     return workflow
 
 
-def compile_workflow():
+def compile_workflow(
+    langgraph_platform=False,
+    **kwargs,
+) -> CompiledStateGraph:
+    """Create and configure the sports analysis assistant agent.
+
+    Args:
+        for_deployment: If True, don't pass store/checkpointer (for LangGraph deployment). If False, create InMemoryStore and MemorySaver for local testing.
+
+    Returns:
+        CompiledStateGraph: Configured SportsAnalysis assistant agent
+    """
+
+    if not langgraph_platform:
+        # Local testing mode - create and use our own store and checkpointer
+        store = InMemoryStore()
+        checkpointer = MemorySaver()
+        kwargs.update(
+            store=store,
+            checkpointer=checkpointer,
+        )
+        set_analyzeragent(checkpointer=checkpointer, store=store)
     workflow = create_workflow()
-    checkpointer = MemorySaver()
+
     compiled = workflow.compile(
-        checkpointer=checkpointer,
         interrupt_before=[
             "generate_visualization",
             "execute_visualization",
             "approval",
             "save_report",
         ],
+        **kwargs,
     )
     logger.info("LangGraph workflow compiled successfully")
     return compiled
 
 
-# Expose the compiled graph for LangGraph Studio/CLI
-graph = compile_workflow()

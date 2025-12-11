@@ -2,17 +2,30 @@ import pandas as pd
 
 from sportsagent import utils
 from sportsagent.agents.analyzeragent import AnalyzerAgent
-from sportsagent.config import setup_logging
-from sportsagent.models.chatboterror import ErrorStates
+from sportsagent.config import settings, setup_logging
+from sportsagent.models.chatboterror import UNKNOWN_ERROR_RESPONSE, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
 
 logger = setup_logging(__name__)
 
+analyzer_agent: AnalyzerAgent | None = None
+
+
+def set_analyzeragent(**kwargs):
+    global analyzer_agent
+    analyzer_agent = AnalyzerAgent(**kwargs)
+
 
 def analyzer_node(state: ChatbotState) -> ChatbotState:
     logger.info("Generating insights using AnalyzerAgent")
-
-    analyzer_agent = None
+    global analyzer_agent
+    if not analyzer_agent:
+        set_analyzeragent()
+    if not analyzer_agent:
+        logger.error("Analyzer Agent is not initialized")
+        state.error = ErrorStates.RESPONSE_GENERATION_ERROR
+        state.generated_response = "Internal error: Analyzer Agent is not available."
+        return state
     try:
         if state.error:
             logger.info("Analyzer Node exiting due to prior error")
@@ -24,7 +37,6 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             return state
 
         # Initialize and run the Analyzer Agent
-        analyzer_agent = AnalyzerAgent()
         df = pd.DataFrame(state.retrieved_data)
 
         # Prepare instructions with data context
@@ -41,7 +53,7 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
         )
 
         # Capture execution trace
-        state.internal_trace = analyzer_agent.get_execution_trace()
+        state.internal_trace = analyzer_agent.get_execution_trace(settings.SHOW_INTERNAL)
 
         # Check for tool calls or fallback request string
         tool_calls = analyzer_agent.get_tool_calls()
@@ -76,15 +88,13 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
         # Attempt to capture trace from partial execution
         if "analyzer_agent" in locals() and analyzer_agent is not None:
             try:
-                state.internal_trace = analyzer_agent.get_execution_trace()
+                state.internal_trace = analyzer_agent.get_execution_trace(show_ai=True)
+                logger.error(f"Internal trace captured with {len(state.internal_trace)} entries")
             except Exception:
                 logger.warning("Failed to retrieve partial trace from analyzer agent")
 
         state.error = ErrorStates.RESPONSE_GENERATION_ERROR
-        state.generated_response = (
-            "I'm sorry, but I'm currently unable to generate insights due to a technical issue. "
-            "Please try again later."
-        )
+        state.generated_response = UNKNOWN_ERROR_RESPONSE
 
     return state
 
