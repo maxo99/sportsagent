@@ -71,6 +71,9 @@ class ParsedQuery(BaseModel):
         def clean(s: str) -> str:
             return "".join(c for c in s if c.isalnum()).strip()
 
+        if self.positions:
+            parts.append("-".join(clean(p) for p in self.positions))
+
         if self.players:
             # Limit to 3 players to keep name short
             parts.append("-".join(clean(p) for p in self.players[:3]))
@@ -85,7 +88,7 @@ class ParsedQuery(BaseModel):
             parts.append("-".join(clean(s) for s in self.statistics[:2]))
 
         if self.time_period.season:
-            parts.append(f"s{self.time_period.season}")
+            parts.append(f"{self.time_period.season}")
 
         if self.comparison:
             parts.append("comp")
