@@ -42,7 +42,6 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
                 recoverable=True,
             )
 
-
         all_data: list[pd.DataFrame] = []
         # Retrieve data for each player
         if positions is not None and len(positions) > 0:

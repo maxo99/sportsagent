@@ -115,7 +115,6 @@ def format_agent_name(agent_name: str) -> str:
     return f"---{formatted_name}----"
 
 
-
 def format_message_content(message):
     """Convert message content to displayable string."""
     parts = []
@@ -191,5 +190,6 @@ def show_prompt(prompt_text: str, title: str = "Prompt", border_style: str = "bl
             padding=(1, 2),
         )
     )
+
 
 console = Console()

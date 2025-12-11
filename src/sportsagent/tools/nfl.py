@@ -21,7 +21,6 @@
 #     return [{player_name: "No News"}]
 
 
-
 # def _get_player_stats(
 #     player_name: str,
 #     season: int | None = None,
@@ -88,7 +87,6 @@
 #     except Exception as e:
 #         logger.error(f"Error retrieving player stats from nflreadpy: {e}")
 #         raise Exception(f"Failed to retrieve player stats: {str(e)}") from e
-
 
 
 # @tool(parse_docstring=True, error_on_invalid_docstring=False)

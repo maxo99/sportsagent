@@ -75,50 +75,47 @@ look: handDrawn
 theme: neutral
 ---
 graph TD;
-	__start__([<p>__start__</p>]):::first
-	entry(entry)
-	exit(exit)
-	query_parser(query_parser)
-	retriever(retriever)
-	analyzer(analyzer)
-	generate_visualization(generate_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
-	execute_visualization(execute_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
-	save_report(save_report<hr/><small><em>__interrupt = before</em></small>):::hitl
-	approval(approval<hr/><small><em>__interrupt = before</em></small>):::hitl
-	__end__([<p>__end__</p>]):::last
-	__start__ --> entry;
-	analyzer -.-> approval;
-	analyzer -.-> exit;
-	analyzer -.-> generate_visualization;
-	analyzer -.-> save_report;
-	approval --> retriever;
-	entry -.-> exit;
-	entry -.-> query_parser;
-	execute_visualization --> save_report;
-	generate_visualization --> execute_visualization;
-	query_parser -.-> exit;
-	query_parser -.-> retriever;
-	retriever -.-> analyzer;
-	retriever -.-> exit;
-	save_report --> exit;
-	exit --> __end__;
-	classDef default fill:#E1F5FE,stroke:#01579B,stroke-width:2px,color:#000000,line-height:1.2
-	classDef first fill:#D1C4E9,stroke-dasharray: 5 5,color:#000000
-	classDef last fill:#D1C4E9,stroke:#4A148C,stroke-width:2px,color:#000000
+ __start__([<p>__start__</p>]):::first
+ entry(entry)
+ exit(exit)
+ query_parser(query_parser)
+ retriever(retriever)
+ analyzer(analyzer)
+ generate_visualization(generate_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
+ execute_visualization(execute_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
+ save_report(save_report<hr/><small><em>__interrupt = before</em></small>):::hitl
+ approval(approval<hr/><small><em>__interrupt = before</em></small>):::hitl
+ __end__([<p>__end__</p>]):::last
+ __start__ --> entry;
+ analyzer -.-> approval;
+ analyzer -.-> exit;
+ analyzer -.-> generate_visualization;
+ analyzer -.-> save_report;
+ approval --> retriever;
+ entry -.-> exit;
+ entry -.-> query_parser;
+ execute_visualization --> save_report;
+ generate_visualization --> execute_visualization;
+ query_parser -.-> exit;
+ query_parser -.-> retriever;
+ retriever -.-> analyzer;
+ retriever -.-> exit;
+ save_report --> exit;
+ exit --> __end__;
+ classDef default fill:#E1F5FE,stroke:#01579B,stroke-width:2px,color:#000000,line-height:1.2
+ classDef first fill:#D1C4E9,stroke-dasharray: 5 5,color:#000000
+ classDef last fill:#D1C4E9,stroke:#4A148C,stroke-width:2px,color:#000000
 
-	classDef hitl fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000000
+ classDef hitl fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000000
 
 ```
-
 
 <!-- REPORTS-START -->
 ## Generated Reports
 
-- [20251209-091723: Show me a chart of t](data/outputs/report_20251209_091723_Show_me_a_chart_of_t/report.md)
-- [20251209-073659: Show me a chart of t](data/outputs/report_20251209_073659_Show_me_a_chart_of_t/report.md)
-- [20251209-065240: Show me a chart of Q](data/outputs/report_20251209_065240_Show_me_a_chart_of_Q/report.md)
-- [20251208-191436: Show me a chart of r](data/outputs/report_20251208_191436_Show_me_a_chart_of_r/report.md)
-- [20251208-191015: Show me a chart of r](data/outputs/report_20251208_191015_Show_me_a_chart_of_r/report.md)
-- [20251208-184158: Show me RB receiving](data/outputs/report_20251208_184158_Show_me_RB_receiving/report.md)
-- [20251208-183520: Show me WR receiving](data/outputs/report_20251208_183520_Show_me_WR_receiving/report.md)
+- [20251210-184118: QB passingyards 2024](data/outputs/20251210_184118_QB_passingyards_2024/report.md)
+- [20251209-091723: QB passingyards 2025](data/outputs/20251209_091723_QB_passingyards_2025/report.md)
+- [20251209-073659: rushingyards 2024](data/outputs/20251209_073659_rushingyards_2024/report.md)
+- [20251209-065240: QB sackyards 2025](data/outputs/20251209_065240_QB_sackyards_2025/report.md)
+- [20251208-191436: RBs rushyardsavg 2025](data/outputs/20251208_191436_RBs_rushyardsavg_2025/report.md)
 <!-- REPORTS-END -->

@@ -120,5 +120,3 @@ def compile_workflow(
     )
     logger.info("LangGraph workflow compiled successfully")
     return compiled
-
-

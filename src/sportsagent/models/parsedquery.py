@@ -78,7 +78,7 @@ class ParsedQuery(BaseModel):
             # Limit to 3 players to keep name short
             parts.append("-".join(clean(p) for p in self.players[:3]))
             if len(self.players) > 3:
-                parts.append(f"and_{len(self.players)-3}_more")
+                parts.append(f"and_{len(self.players) - 3}_more")
 
         if self.teams:
             parts.append("-".join(clean(t) for t in self.teams[:3]))

@@ -200,6 +200,7 @@ def display_report(report_dir_name):
 def get_graph():
     return compile_workflow(langgraph_platform=False)
 
+
 graph = get_graph()
 
 # =============================================================================

@@ -1,4 +1,3 @@
-
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
 

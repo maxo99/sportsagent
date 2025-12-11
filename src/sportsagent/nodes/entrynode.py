@@ -1,4 +1,3 @@
-
 from langchain_core.messages import HumanMessage
 
 from sportsagent.config import setup_logging
