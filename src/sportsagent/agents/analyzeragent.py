@@ -39,7 +39,7 @@ class AnalyzerAgent(BaseAgent):
 
     @property
     def agentName(self) -> str:
-        return "analyzer_agent"
+        return "AnalyzerReactAgent"
 
     @property
     def systemMessage(self) -> str:

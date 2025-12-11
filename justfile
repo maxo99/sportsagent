@@ -8,4 +8,4 @@ run-langgraph:
 	uv run langgraph dev
 
 update-readme:
-	python scripts/update_readme.py
+	uv run python scripts/update_readme.py

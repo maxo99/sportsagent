@@ -14,3 +14,9 @@ data/logos/*.tif
 .chainlit/
 .langgraph_api/
 /workspace.ipynb
+
+# Testing and Quality
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store

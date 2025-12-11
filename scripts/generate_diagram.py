@@ -1,3 +1,4 @@
+import os
 import re
 
 import dotenv
@@ -48,7 +49,20 @@ for node in HITL_NODES:
     # We want to change it to: node_name(node_label):::hitl
     mermaid_text = pattern.sub(r"\1:::hitl", mermaid_text)
 
+# ------------ Add Legend ------------ #
+mermaid_text += """
+    subgraph Legend
+        direction LR
+        L1(System Step):::default
+        L2(Start / End):::first
+        L3(Human Action):::hitl
+    end
+"""
+
 # ------------ Save Results ------------ #
+
+# Ensure docs directory exists
+os.makedirs("docs", exist_ok=True)
 
 # Write to the mmd file
 with open("docs/workflow_diagram.mmd", "w") as f:

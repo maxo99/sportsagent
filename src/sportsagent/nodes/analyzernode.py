@@ -8,24 +8,10 @@ from sportsagent.models.chatbotstate import ChatbotState
 
 logger = setup_logging(__name__)
 
-analyzer_agent: AnalyzerAgent | None = None
-
-
-def set_analyzeragent(**kwargs):
-    global analyzer_agent
-    analyzer_agent = AnalyzerAgent(**kwargs)
-
 
 def analyzer_node(state: ChatbotState) -> ChatbotState:
     logger.info("Generating insights using AnalyzerAgent")
-    global analyzer_agent
-    if not analyzer_agent:
-        set_analyzeragent()
-    if not analyzer_agent:
-        logger.error("Analyzer Agent is not initialized")
-        state.error = ErrorStates.RESPONSE_GENERATION_ERROR
-        state.generated_response = "Internal error: Analyzer Agent is not available."
-        return state
+    analyzer_agent = None
     try:
         if state.error:
             logger.info("Analyzer Node exiting due to prior error")
@@ -37,6 +23,7 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             return state
 
         # Initialize and run the Analyzer Agent
+        analyzer_agent = AnalyzerAgent()
         df = pd.DataFrame(state.retrieved_data)
 
         # Prepare instructions with data context
@@ -86,7 +73,7 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
         logger.error(f"Analyzer Node error: {e}", exc_info=True)
 
         # Attempt to capture trace from partial execution
-        if "analyzer_agent" in locals() and analyzer_agent is not None:
+        if analyzer_agent is not None:
             try:
                 state.internal_trace = analyzer_agent.get_execution_trace(show_ai=True)
                 logger.error(f"Internal trace captured with {len(state.internal_trace)} entries")

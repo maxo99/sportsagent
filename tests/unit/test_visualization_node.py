@@ -1,9 +1,12 @@
-import pytest
 from unittest.mock import MagicMock, patch
-import pandas as pd
-import plotly.graph_objects as go
-from sportsagent.nodes.visualizationnode import visualization_node
+
+import pytest
+
 from sportsagent.models.chatbotstate import ChatbotState
+from sportsagent.nodes.visualizationnode import (
+    execute_visualization_node,
+    generate_visualization_node,
+)
 
 
 @pytest.fixture
@@ -13,11 +16,12 @@ def mock_state():
     state.retrieved_data = [{"col1": 1, "col2": 10}, {"col1": 2, "col2": 20}]
     state.user_query = "Show me a chart"
     state.visualization = None
+    state.visualization_code = None
     return state
 
 
 @patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
-def test_visualization_node_success(mock_chat_openai, mock_state):
+def test_visualization_flow_success(mock_chat_openai, mock_state):
     # Mock the LLM chain response
     mock_llm = MagicMock()
     mock_chat_openai.return_value = mock_llm
@@ -34,27 +38,32 @@ def generate_plot(df):
 """
     mock_chain.invoke.return_value = code_response
 
-    # Execute the node
-    new_state = visualization_node(mock_state)
+    # Execute the generation node
+    state_after_gen = generate_visualization_node(mock_state)
+
+    assert state_after_gen.visualization_code is not None
+
+    # Execute the execution node
+    final_state = execute_visualization_node(state_after_gen)
 
     # Verify that the state was updated with a figure
-    assert new_state.visualization is not None
-    assert isinstance(new_state.visualization, go.Figure)
+    assert final_state.visualization is not None
+    assert isinstance(final_state.visualization, dict)
 
 
 @patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
 def test_visualization_node_no_data(mock_chat_openai, mock_state):
     mock_state.retrieved_data = []
 
-    new_state = visualization_node(mock_state)
+    new_state = generate_visualization_node(mock_state)
 
-    assert new_state.visualization is None
+    assert new_state.visualization_code is None
 
 
 @patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
 def test_visualization_node_not_needed(mock_chat_openai, mock_state):
     mock_state.needs_visualization = False
 
-    new_state = visualization_node(mock_state)
+    new_state = generate_visualization_node(mock_state)
 
-    assert new_state.visualization is None
+    assert new_state.visualization_code is None

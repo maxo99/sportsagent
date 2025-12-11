@@ -80,17 +80,17 @@ graph TD;
  exit(exit)
  query_parser(query_parser)
  retriever(retriever)
- analyzer(analyzer)
+ AnalyzerReactAgent(AnalyzerReactAgent)
  generate_visualization(generate_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
  execute_visualization(execute_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
  save_report(save_report<hr/><small><em>__interrupt = before</em></small>):::hitl
  approval(approval<hr/><small><em>__interrupt = before</em></small>):::hitl
  __end__([<p>__end__</p>]):::last
+ AnalyzerReactAgent -.-> approval;
+ AnalyzerReactAgent -.-> exit;
+ AnalyzerReactAgent -.-> generate_visualization;
+ AnalyzerReactAgent -.-> save_report;
  __start__ --> entry;
- analyzer -.-> approval;
- analyzer -.-> exit;
- analyzer -.-> generate_visualization;
- analyzer -.-> save_report;
  approval --> retriever;
  entry -.-> exit;
  entry -.-> query_parser;
@@ -98,7 +98,7 @@ graph TD;
  generate_visualization --> execute_visualization;
  query_parser -.-> exit;
  query_parser -.-> retriever;
- retriever -.-> analyzer;
+ retriever -.-> AnalyzerReactAgent;
  retriever -.-> exit;
  save_report --> exit;
  exit --> __end__;
@@ -108,11 +108,19 @@ graph TD;
 
  classDef hitl fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000000
 
+    subgraph Legend
+        direction LR
+        L1(System Step):::default
+        L2(Start / End):::first
+        L3(Human Action):::hitl
+    end
+
 ```
 
 <!-- REPORTS-START -->
 ## Generated Reports
 
+- [20251211-181552: RB receivingyards-rushingyards 2023](data/outputs/20251211_181552_RB_receivingyards-rushingyards_2023/report.md)
 - [20251210-184118: QB passingyards 2024](data/outputs/20251210_184118_QB_passingyards_2024/report.md)
 - [20251209-091723: QB passingyards 2025](data/outputs/20251209_091723_QB_passingyards_2025/report.md)
 - [20251209-073659: rushingyards 2024](data/outputs/20251209_073659_rushingyards_2024/report.md)

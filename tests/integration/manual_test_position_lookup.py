@@ -1,8 +1,8 @@
 import asyncio
+
+from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.nodes.queryparsernode import query_parser_node
-from sportsagent.nodes.retrievernode import retriever_node
-from sportsagent.config import setup_logging
 
 setup_logging(__name__)
 
@@ -19,6 +19,7 @@ def test_position_lookup():
 
     # Mock ChatOpenAI
     from unittest.mock import MagicMock, patch
+
     from sportsagent.models.parsedquery import ParsedQuery, TimePeriod
 
     mock_parsed_query = ParsedQuery(

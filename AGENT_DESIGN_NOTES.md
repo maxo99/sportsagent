@@ -76,3 +76,5 @@
   - Re-integrate the memory node to persist conversation context more effectively.
 - **Refinement**:
   - Explore structured output for the `AnalyzerAgent` to explicitly separate "analysis", "judgment", and "visualization_request".
+  - **Abstraction Refactor**: Consider removing the `AnalyzerAgent` class wrapper and defining the agent graph directly in `analyzernode.py` or a dedicated module to simplify the architecture and remove the extra abstraction layer.
+  - **Visualization Trigger**: Replace the string-matching logic (`"visualiz" in response`) with a structured output or dedicated tool call (`request_visualization`) for deterministic behavior.

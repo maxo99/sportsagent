@@ -6,9 +6,7 @@ from langgraph.store.memory import InMemoryStore
 from sportsagent import routing
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
-
-# from sportsagent.nodes.memorynode import memory_node
-from sportsagent.nodes.analyzernode import analyzer_node, set_analyzeragent
+from sportsagent.nodes.analyzernode import analyzer_node
 from sportsagent.nodes.approvalnode import approval_node
 from sportsagent.nodes.entrynode import entry_node
 from sportsagent.nodes.exitnode import exit_node
@@ -28,12 +26,11 @@ NODES = {
     "exit": exit_node,
     "query_parser": query_parser_node,
     "retriever": retriever_node,
-    "analyzer": analyzer_node,
+    "AnalyzerReactAgent": analyzer_node,
     "generate_visualization": generate_visualization_node,
     "execute_visualization": execute_visualization_node,
     "save_report": save_report_node,
     "approval": approval_node,
-    # "memory": memory_node,
 }
 
 CONDITIONAL_EDGES = [
@@ -50,10 +47,10 @@ CONDITIONAL_EDGES = [
     (
         "retriever",
         routing.should_continue_after_retriever,
-        ["analyzer", "exit"],
+        ["AnalyzerReactAgent", "exit"],
     ),
     (
-        "analyzer",
+        "AnalyzerReactAgent",
         routing.should_continue_after_analyzer,
         ["approval", "generate_visualization", "save_report", "exit"],
     ),
@@ -106,7 +103,7 @@ def compile_workflow(
             store=store,
             checkpointer=checkpointer,
         )
-        set_analyzeragent(checkpointer=checkpointer, store=store)
+        # set_analyzeragent(checkpointer=checkpointer, store=store)
     workflow = create_workflow()
 
     compiled = workflow.compile(
