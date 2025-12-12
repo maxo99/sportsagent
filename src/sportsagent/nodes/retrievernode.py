@@ -128,8 +128,12 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
 
         # Apply aggregation if requested
         if aggregation:
+            group_cols = ["player_name", "team", "position"]
+            if "season" in combined_data.columns:
+                group_cols.append("season")
+
             combined_data = aggregate_data(
-                combined_data, aggregation, group_by=["player_name", "team", "position"]
+                combined_data, aggregation, group_by=group_cols
             )
 
         # Store retrieved data in state
@@ -319,8 +323,13 @@ def aggregate_data(
     # Select numeric columns for aggregation
     numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
 
-    # Exclude grouping columns
-    agg_cols = [col for col in numeric_cols if col not in group_by]
+    # Exclude grouping columns and non-aggregatable columns
+    exclude_cols = ["season", "week", "year"]
+    agg_cols = [
+        col
+        for col in numeric_cols
+        if col not in group_by and col not in exclude_cols
+    ]
 
     if not agg_cols:
         return df

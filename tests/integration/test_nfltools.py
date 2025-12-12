@@ -1,4 +1,11 @@
+import nflreadpy as nfl
+
 from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
+
+
+def test_columns():
+    data = nfl.load_player_stats(seasons=[2024]).to_pandas()
+    print(data)
 
 
 def test_get_player_stats():

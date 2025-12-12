@@ -5,7 +5,7 @@
 
 ## General Guidelines
 - Always ask for clarification if the request is not clear or there are multiple routes to consider.
-
+- Always use uv for calling python 
 
 ## Generation Guidelines
 - Never present generated, inferred, speculated or deduced content as fact.

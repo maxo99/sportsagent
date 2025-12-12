@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+import pandas as pd
 import plotly.io as pio
 
 from sportsagent.config import settings, setup_logging
@@ -59,6 +60,11 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
                     pio.write_image(fig, os.path.join(report_dir, "chart.png"))
                 except Exception as e:
                     logger.warning(f"Failed to save PNG (kaleido might be missing): {e}")
+
+                # Save Data used for chart if available
+                if state.retrieved_data:
+                    df = pd.DataFrame(state.retrieved_data)
+                    df.to_csv(os.path.join(report_dir, "retrieved_data.csv"), index=False)
 
                 chart_filename = "chart.html"
                 logger.info("Saved visualization files.")
