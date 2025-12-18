@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 
@@ -25,7 +24,7 @@ def get_reports():
                 else:
                     readable_name = dir_name
 
-            reports.append({"name": readable_name, "path": str(report_file)})
+                reports.append({"name": readable_name, "path": str(report_file)})
 
     # Sort reports by name (which includes timestamp) descending
     reports.sort(key=lambda x: x["name"], reverse=True)

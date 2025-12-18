@@ -95,18 +95,21 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
             report_content.append(f"```python\n{state.visualization_code}\n```\n")
 
         report_content.append("## Chat History")
-        for msg in state.messages:
-            role = msg.type if hasattr(msg, "type") else "unknown"
-            # Try to handle different message types or dicts if messages are dicts
-            if isinstance(msg, dict):
-                role = msg.get("role", "unknown")
-                content = msg.get("content", "")
-            else:
-                role = msg.type
-                content = msg.content
+        for turn in state.conversation_history:
+            if "content" in turn:
+                report_content.append(f"**User:** {turn['content']}\n")
+            if "response" in turn:
+                report_content.append(f"**Assistant:** {turn['response']}\n")
+            # report_content.append("---\n")
+            # if isinstance(msg, dict):
+            #     role = msg.get("role", "unknown")
+            #     content = msg.get("content", "")
+            # else:
+            #     role = msg.type
+            #     content = msg.content
 
-            report_content.append(f"### {role.capitalize()}")
-            report_content.append(f"{content}\n")
+            # report_content.append(f"### {role.capitalize()}")
+            # report_content.append(f"{content}\n")
 
         # Save Report Markdown
         with open(os.path.join(report_dir, "report.md"), "w") as f:

@@ -102,7 +102,8 @@ class PlayerStatsQuery(StatisticsQuery):
         parts = []
 
         if self.position:
-            parts.append("-".join(_clean(p) for p in self.position))
+            # parts.append("-".join(_clean(p) for p in self.position))
+            parts.append(self.position)
 
         if self.players:
             # Limit to 3 players to keep name short
@@ -118,7 +119,8 @@ class PlayerStatsQuery(StatisticsQuery):
             parts.append("-".join(_clean(s) for s in self.statistics[:2]))
 
         if self.tp.seasons:
-            parts.append(f"{self.tp.seasons}")
+            parts.append("-".join(str(p) for p in self.tp.seasons))
+            # parts.append(f"{self.tp.seasons}")
 
         # if self.comparison:
         #     parts.append("comp")
@@ -155,7 +157,7 @@ class TeamStatsQuery(StatisticsQuery):
             parts.append("-".join(_clean(s) for s in self.statistics[:2]))
 
         if self.tp.seasons:
-            parts.append(f"{self.tp.seasons}")
+            parts.append("-".join(str(p) for p in self.tp.seasons))
 
         # if self.comparison:
         #     parts.append("comp")

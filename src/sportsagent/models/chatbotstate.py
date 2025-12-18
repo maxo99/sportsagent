@@ -1,7 +1,6 @@
 from typing import Annotated, Any
 
 from IPython.display import Markdown
-from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, Field, StringConstraints
 
 from sportsagent.models.chatboterror import ErrorStates
@@ -49,7 +48,6 @@ class ChatbotState(BaseModel):
     }
     session_id: str
     user_query: Annotated[str, StringConstraints(strip_whitespace=True)]
-    messages: list[BaseMessage] = Field(default_factory=list)
     parsed_query: ParsedQuery = Field(default_factory=ParsedQuery)
     generated_response: str | Markdown
     conversation_history: ConversationHistory = Field(default_factory=list)
