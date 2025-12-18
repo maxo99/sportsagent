@@ -34,3 +34,32 @@ class ChatbotError(Exception):
         self.details = details or {}
         self.recoverable = recoverable
         super().__init__(self.message)
+
+
+class RetrievalError(ChatbotError):
+    def __init__(
+        self,
+        message: str,
+        details: dict[str, Any] | None = None,
+        recoverable: bool = True,
+    ):
+        super().__init__(
+            error_type=ErrorStates.RETRIEVAL_ERROR,
+            message=message,
+            details=details,
+            recoverable=recoverable,
+        )
+
+class ParsingError(ChatbotError):
+    def __init__(
+        self,
+        message: str,
+        details: dict[str, Any] | None = None,
+        recoverable: bool = True,
+    ):
+        super().__init__(
+            error_type=ErrorStates.PARSING_ERROR,
+            message=message,
+            details=details,
+            recoverable=recoverable,
+        )

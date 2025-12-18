@@ -3,11 +3,10 @@ import asyncio
 import pandas as pd
 
 from sportsagent.config import setup_logging
-from sportsagent.constants import POSITION_STATS_MAP
 from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
-from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.models.parsedquery import QueryFilters
+from sportsagent.models.chatbotstate import ChatbotState, RetrievedData
+from sportsagent.models.parsedquery import PlayerStatsQuery, QueryFilters, TeamStatsQuery
 
 logger = setup_logging(__name__)
 
@@ -21,129 +20,45 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
             state.error = ErrorStates.PARSING_ERROR
             state.generated_response = "No parsed query available for data retrieval."
             return state
+        pq = state.parsed_query
 
         # Skip retrieval if clarification is needed
-        if state.parsed_query.needs_clarification:
+        if pq.needs_clarification:
             return state
 
-        # Extract query parameters
-        players = state.parsed_query.players
-        positions = state.parsed_query.positions
-        statistics = state.parsed_query.statistics
-        time_period = state.parsed_query.time_period
-        filters = state.parsed_query.filters
-        aggregation = state.parsed_query.aggregation
+        retrieved_data = RetrievedData()
 
-        if not players and not positions:
-            raise ChatbotError(
-                error_type=ErrorStates.VALIDATION_ERROR,
-                message="No players or positions specified in query",
-                details={"parsed_query": state.parsed_query},
-                recoverable=True,
-            )
+        if psq := pq.player_stats_query:
+            player_data = fetch_player_statistics(psq)
+            if player_data is not None:
+                records = player_data.to_dict(orient="records")
+                retrieved_data.add_player_data(
+                    [{str(k): v for k, v in record.items()} for record in records],
+                )
 
-        all_data: list[pd.DataFrame] = []
-        # Retrieve data for each player
-        if positions is not None and len(positions) > 0:
-            for position in positions:
-                if position not in POSITION_STATS_MAP:
-                    logger.warning(f"Invalid position requested: {position}")
-                    continue
+        if tsq := pq.team_stats_query:
+            team_data = fetch_team_statistics(tsq)
+            if team_data is not None:
+                records = team_data.to_dict(orient="records")
+                retrieved_data.add_team_data(
+                    [{str(k): v for k, v in record.items()} for record in records],
+                )
 
-                try:
-                    # Extract time period parameters
-                    season = time_period.season
-                    week = time_period.week
-                    if week is None:
-                        specific_weeks = time_period.specific_weeks
-                        if specific_weeks:
-                            week = specific_weeks[0]
-
-                    position_data = NFL_DATASOURCE.get_position_stats(
-                        position=position,
-                        season=season,
-                        week=week,
-                        stats=statistics if statistics else None,
-                    )
-
-                    # Normalize data format
-                    # position_data = normalize_data_format(position_data)
-
-                    # Apply filters
-                    if filters:
-                        position_data = apply_filters(position_data, filters)
-
-                    all_data.append(position_data)
-
-                except Exception as e:
-                    logger.error(f"Failed to retrieve data for position {position}: {e}")
-                    continue
-        elif players is not None and len(players) > 0:
-            for player in players:
-                try:
-                    # Extract time period parameters
-                    season = time_period.season
-                    week = time_period.week
-                    if week is None:
-                        specific_weeks = time_period.specific_weeks
-                        if specific_weeks:
-                            week = specific_weeks[0]
-
-                    player_data = NFL_DATASOURCE.get_player_stats(
-                        player_name=player,
-                        season=season,
-                        week=week,
-                        stats=statistics if statistics else None,
-                    )
-
-                    # Normalize data format
-                    # player_data = normalize_data_format(player_data)
-
-                    # Apply filters
-                    if filters:
-                        player_data = apply_filters(player_data, filters)
-
-                    all_data.append(player_data)
-
-                except Exception as e:
-                    logger.error(f"Failed to retrieve data for {player}: {e}")
-                    # Continue with other players
-                    continue
-
-        if not all_data:
+        if not retrieved_data.players and not retrieved_data.teams:
             raise ChatbotError(
                 error_type=ErrorStates.NO_DATA_FOUND,
-                message="No statistics found for the requested player(s) or position(s)",
+                message="No statistics found for the requested player(s), position(s), or team(s)",
                 details={
-                    "players": players,
-                    "positions": positions,
-                    "season": time_period.season,
-                    "week": time_period.week,
+                    "players": psq.players if psq else None,
+                    "positions": psq.position if psq else None,
+                    "teams": tsq.teams if tsq else None,
+                    "season": psq.tp.seasons if psq else None,
                 },
                 recoverable=True,
             )
 
-        # Combine all player data
-        combined_data = pd.concat(all_data, ignore_index=True)
-
-        # Apply aggregation if requested
-        if aggregation:
-            group_cols = ["player_name", "team", "position"]
-            if "season" in combined_data.columns:
-                group_cols.append("season")
-
-            combined_data = aggregate_data(
-                combined_data, aggregation, group_by=group_cols
-            )
-
-        # Store retrieved data in state
-        records = combined_data.to_dict(orient="records")
-        state.retrieved_data = [{str(k): v for k, v in record.items()} for record in records]
-
-        logger.info(
-            f"Successfully retrieved {len(combined_data)} records for {len(players)} player(s) and {len(positions)} position(s)"
-        )
-
+        state.retrieved_data = retrieved_data
+        logger.info(f"Successfully retrieved data. Keys: {state.retrieved_data.keys()}")
         return state
 
     except ChatbotError:
@@ -159,6 +74,51 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
         ) from e
 
 
+def fetch_player_statistics(psq: PlayerStatsQuery) -> pd.DataFrame | None:
+    try:
+        player_data = NFL_DATASOURCE.get_player_stats(
+            players=psq.players,
+            position=psq.position,
+            seasons=psq.tp.seasons,
+            summary_level=psq.tp.summary_level,
+            stats=psq.stats_cols,
+        )
+
+        # if psq.time_period.specific_weeks:
+        #     specific_weeks = psq.time_period.specific_weeks
+        #     player_data = player_data[
+        #         player_data["week"].isin(specific_weeks)
+        #     ].copy()
+
+        # Normalize data format
+        player_data = normalize_data_format(player_data)
+
+        # # Apply filters
+        # if pq.filters:
+        #     player_data = apply_filters(player_data, pq.filters)
+
+        return player_data
+    except Exception as e:
+        logger.error(f"Failed to retrieve data for {psq.queryName}: {e}")
+        return None
+
+
+def fetch_team_statistics(tsq: TeamStatsQuery)-> pd.DataFrame | None:
+    try:
+        team_data = NFL_DATASOURCE.get_team_stats(
+            teams=tsq.teams,
+            seasons=tsq.tp.seasons,
+            stats=tsq.stats_cols,
+            summary_level=tsq.tp.summary_level,
+        )
+
+        team_data = normalize_data_format(team_data)
+        return team_data
+    except Exception as e:
+        logger.error(f"Failed to retrieve data for team {tsq.queryName}: {e}")
+        return None
+
+
 def retrieve_data_sync(state: ChatbotState) -> ChatbotState:
     try:
         loop = asyncio.get_event_loop()
@@ -170,12 +130,14 @@ def retrieve_data_sync(state: ChatbotState) -> ChatbotState:
 
 
 def retriever_node(state: ChatbotState) -> ChatbotState:
-    logger.info("Fetching player statistics")
+    logger.info(
+        f"Fetching statistics based on query intent: {state.parsed_query.query_intent if state.parsed_query else 'unknown'}"
+    )
     try:
         state = retrieve_data_sync(state)
 
         if state.retrieved_data is not None and len(state.retrieved_data) > 0:
-            logger.info(f"Retrieved {len(state.retrieved_data)} records")
+            logger.info(f"Retrieved {len(state.retrieved_data)} datasets")
         else:
             logger.warning("No data retrieved")
             if state.parsed_query:
@@ -232,46 +194,25 @@ def normalize_data_format(df: pd.DataFrame) -> pd.DataFrame:
     regardless of which data source provided the data.
 
     Args:
-        df: DataFrame from any data source
+        df: DataFrame from nflreadpy datasource
 
     Returns:
         Normalized DataFrame
     """
     result = df.copy()
 
-    # Standardize column names
-    # column_mapping = {
-    #     "player": "player_name",
-    #     "year": "season",
-    #     "tm": "team",
-    #     "pos": "position",
-    #     "pass_yds": "passing_yards",
-    #     "pass_td": "passing_touchdowns",
-    #     "rush_yds": "rushing_yards",
-    #     "rush_td": "rushing_touchdowns",
-    #     "rec_yds": "receiving_yards",
-    #     "rec_td": "receiving_touchdowns",
-    #     "rec": "receptions",
-    #     "tgt": "targets",
-    #     "att": "attempts",
-    #     "cmp": "completions",
-    #     "int": "interceptions",
-    # }
-
-    # result = result.rename(columns=column_mapping)
-
     # Ensure numeric columns are proper type
     numeric_columns = [
         "passing_yards",
-        "passing_touchdowns",
+        "passing_tds",
         "completions",
         "attempts",
         "interceptions",
         "rushing_yards",
-        "rushing_touchdowns",
+        "rushing_tds",
         "rushing_attempts",
         "receiving_yards",
-        "receiving_touchdowns",
+        "receiving_tds",
         "receptions",
         "targets",
         "season",
@@ -325,11 +266,7 @@ def aggregate_data(
 
     # Exclude grouping columns and non-aggregatable columns
     exclude_cols = ["season", "week", "year"]
-    agg_cols = [
-        col
-        for col in numeric_cols
-        if col not in group_by and col not in exclude_cols
-    ]
+    agg_cols = [col for col in numeric_cols if col not in group_by and col not in exclude_cols]
 
     if not agg_cols:
         return df

@@ -7,6 +7,7 @@
 The system operates as a cyclic graph that alternates between **Retrieval** (fetching data from `nflreadpy`) and **Analysis** (interpreting data with an LLM). It features:
 
 - **Autonomous Reasoning**: The `AnalyzerAgent` determines if the retrieved data is sufficient or if more is needed.
+- **Team & Player Stats**: Supports querying for individual players, entire positions, or specific teams (including "ALL" teams).
 - **Interactive Visualization**: Users can request charts, which are generated on-the-fly by the agent writing and executing Plotly code.
 - **Stateful Conversations**: Maintains context across multiple turns, allowing for iterative refinement of queries (e.g., "Compare Mahomes and Allen" -> "Now add Burrow").
 
@@ -35,7 +36,7 @@ This project showcases two distinct HITL patterns:
 
 Managing state in a complex agentic workflow is critical. We use a custom Pydantic model `ChatbotState` that tracks:
 
-- **`retrieved_data`**: A canonical list of dictionaries containing the raw NFL data. To ensure compatibility with LangGraph's checkpointing (which uses `msgpack`), we avoid storing raw Pandas DataFrames directly in the state.
+- **`retrieved_data`**: A dictionary of datasets (`dict[str, list[dict]]`) containing the raw NFL data. Keys typically include "players" or "teams". This structure supports multi-modal analysis (e.g., comparing a player's stats against team averages).
 - **`visualization`**: Stores the generated Plotly figure as a JSON-serialized dictionary, allowing it to be passed between nodes and rendered by the frontend without pickling issues.
 
 ## Key Components

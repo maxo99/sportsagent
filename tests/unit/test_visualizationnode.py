@@ -13,7 +13,7 @@ from sportsagent.nodes.visualizationnode import (
 def mock_state():
     state = MagicMock(spec=ChatbotState)
     state.needs_visualization = True
-    state.retrieved_data = [{"col1": 1, "col2": 10}, {"col1": 2, "col2": 20}]
+    state.retrieved_data = {"default": [{"col1": 1, "col2": 10}, {"col1": 2, "col2": 20}]}
     state.user_query = "Show me a chart"
     state.visualization = None
     state.visualization_code = None
@@ -53,7 +53,7 @@ def generate_plot(df):
 
 @patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
 def test_visualization_node_no_data(mock_chat_openai, mock_state):
-    mock_state.retrieved_data = []
+    mock_state.retrieved_data = {}
 
     new_state = generate_visualization_node(mock_state)
 

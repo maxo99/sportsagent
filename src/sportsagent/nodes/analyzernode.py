@@ -22,27 +22,42 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             state.generated_response = "No data available for analysis."
             return state
 
-        # Initialize and run the Analyzer Agent
         analyzer_agent = AnalyzerAgent()
-        df = pd.DataFrame(state.retrieved_data)
+
+        data_context = {}
+        data_sample_str = ""
+        total_rows = 0
+
+        for key, records in state.retrieved_data.items():
+            if records:
+                df = pd.DataFrame(records)
+                data_context[key] = df
+                data_sample_str += f"\n### Dataset: {key}\n{df.head(3).to_string()}\n"
+                total_rows += len(df)
+
+        primary_df = pd.DataFrame()
+        if "players" in data_context:
+            primary_df = data_context["players"]
+        elif "teams" in data_context:
+            primary_df = data_context["teams"]
+        elif data_context:
+            primary_df = list(data_context.values())[0]
 
         # Prepare instructions with data context
         user_instructions = utils.get_prompt_template("analyzer_instructions.j2").render(
-            data_sample=df.head(3).to_string(),
-            row_count=len(df),
+            data_sample=data_sample_str,
+            row_count=total_rows,
             user_instructions=state.user_query,
         )
 
         analyzer_agent.invoke_agent(
             user_instructions=user_instructions,
-            data_raw=df,
+            data_raw=primary_df,
             session_id=state.session_id,
         )
 
-        # Capture execution trace
         state.internal_trace = analyzer_agent.get_execution_trace(settings.SHOW_INTERNAL)
 
-        # Check for tool calls or fallback request string
         tool_calls = analyzer_agent.get_tool_calls()
         ai_message = analyzer_agent.get_ai_message(markdown=False)
 
@@ -61,7 +76,6 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
 
             logger.warning("Could not find REQUEST_MORE_DATA string despite trigger")
 
-        # Process standard response
         state.generated_response = ai_message
 
         if any(k in ai_message.lower() for k in ["visualiz", "plot", "chart"]):

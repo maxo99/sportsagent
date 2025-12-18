@@ -63,8 +63,10 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
 
                 # Save Data used for chart if available
                 if state.retrieved_data:
-                    df = pd.DataFrame(state.retrieved_data)
-                    df.to_csv(os.path.join(report_dir, "retrieved_data.csv"), index=False)
+                    for key, records in state.retrieved_data.items():
+                        if records:
+                            df = pd.DataFrame(records)
+                            df.to_csv(os.path.join(report_dir, f"retrieved_data_{key}.csv"), index=False)
 
                 chart_filename = "chart.html"
                 logger.info("Saved visualization files.")

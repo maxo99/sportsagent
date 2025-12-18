@@ -10,6 +10,38 @@ from sportsagent.models.parsedquery import ParsedQuery
 type ConversationHistory = list[dict[str, Any]]
 
 
+class RetrievedData(BaseModel):
+    players: list[dict[str, Any]] = Field(default_factory=list)
+    teams: list[dict[str, Any]] = Field(default_factory=list)
+
+    def items(self):
+        """Iterate over non-empty datasets."""
+        if self.players:
+            yield "players", self.players
+        if self.teams:
+            yield "teams", self.teams
+
+    def keys(self):
+        """Return keys of non-empty datasets."""
+        keys = []
+        if self.players:
+            keys.append("players")
+        if self.teams:
+            keys.append("teams")
+        return keys
+
+    def __len__(self):
+        """Return number of non-empty datasets."""
+        return (1 if self.players else 0) + (1 if self.teams else 0)
+
+    def add_player_data(self, data: list[dict[str, Any]]) -> None:
+        self.players.extend(data)
+
+
+    def add_team_data(self, data: list[dict[str, Any]]) -> None:
+        self.teams.extend(data)
+
+
 class ChatbotState(BaseModel):
     model_config = {
         "arbitrary_types_allowed": True,
@@ -18,11 +50,11 @@ class ChatbotState(BaseModel):
     session_id: str
     user_query: Annotated[str, StringConstraints(strip_whitespace=True)]
     messages: list[BaseMessage] = Field(default_factory=list)
-    parsed_query: ParsedQuery | None = Field(default=None)
+    parsed_query: ParsedQuery = Field(default_factory=ParsedQuery)
     generated_response: str | Markdown
     conversation_history: ConversationHistory = Field(default_factory=list)
     error: ErrorStates | None = Field(default=None)
-    retrieved_data: list[dict[str, Any]] | None = Field(default=None)
+    retrieved_data: RetrievedData | None = Field(default=None)
     needs_visualization: bool = Field(default=False)
     visualization_code: str | None = Field(default=None)
     visualization: Any | None = Field(default=None)
@@ -37,3 +69,11 @@ class ChatbotState(BaseModel):
             f"generated_response={str(self.generated_response)[:20]}..., "
             f"error={self.error})"
         )
+
+    @property
+    def pq(self) -> ParsedQuery:
+        if self.parsed_query is None:
+            self.error = ErrorStates.PARSING_ERROR
+            self.generated_response = "No parsed query available for data retrieval."
+            raise ValueError("parsed_query is None")
+        return self.parsed_query

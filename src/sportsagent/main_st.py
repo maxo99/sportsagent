@@ -7,6 +7,7 @@ import streamlit as st
 
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
+from sportsagent.models.parsedquery import ParsedQuery
 from sportsagent.utils import plotly_from_dict
 from sportsagent.workflow import compile_workflow
 
@@ -36,7 +37,7 @@ if "workflow_trace" not in st.session_state:
     st.session_state["workflow_trace"] = []
 
 if "retrieved_data" not in st.session_state:
-    st.session_state["retrieved_data"] = []
+    st.session_state["retrieved_data"] = None
 
 # Sidebar
 st.sidebar.header("Debug Info")
@@ -81,7 +82,6 @@ def run_workflow(inputs=None):
         st.session_state["workflow_trace"] = []  # Clear trace for new query
         stream = graph.stream(inputs, config=config, stream_mode="updates")
 
-    final_state = None
     for chunk in stream:
         for node_name, node_state in chunk.items():
             logger.info(f"Executed node: {node_name}")
@@ -100,7 +100,6 @@ def run_workflow(inputs=None):
     if snapshot.values and "retrieved_data" in snapshot.values:
         data = snapshot.values["retrieved_data"]
         if data:
-            st.session_state["current_dataframe"] = pd.DataFrame(data)
             st.session_state["retrieved_data"] = data
 
     if snapshot.next:
@@ -129,7 +128,6 @@ def process_final_result(final_state):
     if final_state and "retrieved_data" in final_state:
         data = final_state["retrieved_data"]
         if data:
-            st.session_state["current_dataframe"] = pd.DataFrame(data)
             st.session_state["retrieved_data"] = data
 
     response = final_state.get("generated_response", "")
@@ -320,6 +318,7 @@ with tab_chat:
             generated_response="",
             conversation_history=sanitized_history,
             retrieved_data=st.session_state["retrieved_data"],
+            parsed_query=ParsedQuery(parse_status='unparsed')
         )
 
         with st.spinner("Thinking..."):
@@ -337,6 +336,13 @@ with tab_review:
         st.info("No reports found.")
 
 # Debug / Data View
-if "current_dataframe" in st.session_state:
+if st.session_state.get("retrieved_data"):
     with st.expander("Current Data", expanded=False):
-        st.dataframe(st.session_state["current_dataframe"])
+        data = st.session_state["retrieved_data"]
+        if data:
+            # If it's a dict of datasets, use tabs
+            tabs = st.tabs(list(data.keys()))
+            for i, (key, records) in enumerate(data.items()):
+                with tabs[i]:
+                    st.subheader(f"Dataset: {key}")
+                    st.dataframe(pd.DataFrame(records))

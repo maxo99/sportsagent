@@ -17,10 +17,20 @@ Requirements:
 7. The code should be a valid Python code block.
 8. You have access to a global variable `TEAM_COLORS` which is a dictionary mapping team abbreviations (e.g., 'KC', 'BUF') to hex colors. Use this to color the chart elements by team if applicable (e.g. `color='team', color_discrete_map=TEAM_COLORS`).
 9. Do NOT define `TEAM_COLORS` yourself. It is already defined in the global scope. Defining it will overwrite the complete list with your partial list.
+10. **Aggregation vs. Counting**:
+    - If the user asks for a "count" or "number of games" (e.g., "games with > 300 yards"), you MUST aggregate the data first.
+    - Do NOT just plot the raw metric (e.g., `passing_yards`) on the Y-axis if the goal is to count occurrences.
+    - Instead, create a new dataframe that counts the rows meeting the criteria (e.g., `groupby('player_name').size()`) and plot that count.
+11. IMPORTANT: Output ONLY the python code. Do not include any explanation, comments, or text before or after the code.
 
 Example structure:
 
 def generate_plot(df):
     import plotly.express as px
+    # Example: Count games with > 300 passing yards
+    # filtered = df[df['passing_yards'] > 300]
+    # counts = filtered.groupby('player_name').size().reset_index(name='game_count')
+    # fig = px.bar(counts, x='player_name', y='game_count')
+    
     fig = px.bar(df, x='col1', y='col2')
     return fig

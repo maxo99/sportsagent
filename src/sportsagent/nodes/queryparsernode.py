@@ -7,7 +7,6 @@ from langchain_openai import ChatOpenAI
 from sportsagent import utils
 from sportsagent.config import settings, setup_logging
 from sportsagent.constants import CURRENT_SEASON
-from sportsagent.datasource.nflreadpy import normalize_stat_names, normalize_team_names
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState, ConversationHistory
 from sportsagent.models.parsedquery import ParsedQuery
@@ -127,11 +126,6 @@ async def _parse_query(state: ChatbotState) -> ChatbotState:
         )
         if not isinstance(parsed_result, ParsedQuery):
             raise ValueError("LLM did not return a ParsedQuery instance")
-
-        # Normalize stat names and team names
-        parsed_result.statistics = normalize_stat_names(parsed_result.statistics)
-        parsed_result.teams = normalize_team_names(parsed_result.teams)
-        parsed_result.positions = [p.upper() for p in parsed_result.positions]
 
         # Store parsed query in state
         state.parsed_query = parsed_result

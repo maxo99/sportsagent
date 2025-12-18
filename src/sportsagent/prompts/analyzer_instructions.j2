@@ -1,5 +1,5 @@
 ## CONTEXT: 
-You have access to a dataset retrieved for the user's query with {{ row_count }} rows. 
+You have access to retrieved data with approximately {{ row_count }} total rows. 
 
 ## User Instuctions
 {{ user_instructions }}
@@ -8,7 +8,8 @@ You have access to a dataset retrieved for the user's query with {{ row_count }}
 {{ data_sample }}
 
 ## Available Tools:
-Use the `explain_data` or `describe_dataset` tools to inspect it further if needed. 
+Use the `explain_data` or `describe_dataset` tools to inspect the primary dataset further if needed. 
+Note: Tools currently operate on the primary dataset (e.g. players or teams).
 
 ## IMPORTANT:
 Do NOT request this data again.

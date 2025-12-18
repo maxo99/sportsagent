@@ -24,27 +24,40 @@ def generate_visualization_node(state: ChatbotState) -> ChatbotState:
     logger.info("Generating visualization code...")
 
     try:
-        # Prepare data summary
-        df = pd.DataFrame(state.retrieved_data)
-        # Limit rows for prompt context
-        data_summary = (
-            f"Columns: {list(df.columns)}\nSample data (first 5 rows):\n{df.head().to_string()}"
-        )
+        data_summary = ""
+        primary_df = None
+
+        if state.retrieved_data:
+            for key, records in state.retrieved_data.items():
+                if records:
+                    df = pd.DataFrame(records)
+                    data_summary += f"\n### Dataset: {key}\nColumns: {list(df.columns)}\nSample data (first 5 rows):\n{df.head().to_string()}\n"
+                    if primary_df is None:
+                        primary_df = df
+        else:
+            logger.warning("No retrieved data available for visualization.")
+            return state
 
         # Initialize LLM
         llm = ChatOpenAI(model=settings.OPENAI_MODEL)
 
-        # Get and render prompt
         template = get_prompt_template("visualization_instruction.j2")
         prompt_text = template.render(query=state.user_query, data_summary=data_summary)
 
         chain = llm | StrOutputParser()
 
-        # Generate code
         code = chain.invoke(prompt_text)
 
-        # Clean code (remove markdown if present despite instructions)
-        code = code.replace("```python", "").replace("```", "").strip()
+        if "```python" in code:
+            code = code.split("```python")[1].split("```")[0].strip()
+        elif "```" in code:
+            code = code.split("```")[1].split("```")[0].strip()
+
+        if "def generate_plot" in code:
+            start_idx = code.find("def generate_plot")
+            code = code[start_idx:]
+
+        code = code.strip()
 
         logger.info(f"Generated visualization code:\n{code}")
         state.visualization_code = code
@@ -66,7 +79,24 @@ def execute_visualization_node(state: ChatbotState) -> ChatbotState:
     logger.info("Executing visualization code...")
 
     try:
-        df = pd.DataFrame(state.retrieved_data)
+        datasets = {}
+        primary_df = pd.DataFrame()
+
+        if state.retrieved_data:
+            for key, records in state.retrieved_data.items():
+                if records:
+                    datasets[key] = pd.DataFrame(records)
+
+            if "players" in datasets:
+                primary_df = datasets["players"]
+            elif "teams" in datasets:
+                primary_df = datasets["teams"]
+            elif datasets:
+                primary_df = list(datasets.values())[0]
+        else:
+            logger.warning("No retrieved data available for execution.")
+            return state
+
         local_vars = {}
         global_vars = {"TEAM_COLORS": TEAM_COLORS}
 
@@ -75,7 +105,7 @@ def execute_visualization_node(state: ChatbotState) -> ChatbotState:
             generate_plot = local_vars.get("generate_plot")
 
             if generate_plot and callable(generate_plot):
-                fig = generate_plot(df)
+                fig = generate_plot(primary_df)
                 if fig:
                     # Convert to dict for serialization (msgpack compatibility)
                     import json
