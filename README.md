@@ -126,6 +126,8 @@ graph TD;
 <!-- REPORTS-START -->
 ## Generated Reports
 
+- [20251219-103956: general query](data/outputs/20251219_103956_general_query/report.md)
+- [20251218-113410: playerstats-QB ALL rushingyards 2025](data/outputs/20251218_113410_playerstats-QB_ALL_rushingyards_2025/report.md)
 - [20251211-181552: RB receivingyards-rushingyards 2023](data/outputs/20251211_181552_RB_receivingyards-rushingyards_2023/report.md)
 - [20251210-184118: QB passingyards 2024](data/outputs/20251210_184118_QB_passingyards_2024/report.md)
 - [20251209-091723: QB passingyards 2025](data/outputs/20251209_091723_QB_passingyards_2025/report.md)
