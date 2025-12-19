@@ -6,9 +6,6 @@ import nflreadpy as nfl
 import pandas as pd
 
 from sportsagent.config import setup_logging
-from sportsagent.constants import (
-    TEAMS_STATS_MAP,
-)
 from sportsagent.models.chatboterror import RetrievalError
 
 logger = setup_logging(__name__)
@@ -92,8 +89,6 @@ class NFLReadPyDataSource:
         stats: list[str] | None = None,
     ) -> pd.DataFrame:
         try:
-            if stats is None:
-                stats = TEAMS_STATS_MAP["ALL"]
 
             logger.info(f"Retrieving Team stats for {teams=}, {seasons=}, {summary_level=}")
 

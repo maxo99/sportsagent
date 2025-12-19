@@ -9,19 +9,26 @@ dotenv.load_dotenv()
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
     # Project Paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     SRC_DIR: Path = BASE_DIR / "src"
     DATA_DIR: Path = SRC_DIR / "data"
+    # Logging and LLM Settings
     LOG_LEVEL: str = "INFO"
     LLM_MODEL: str = "openai:gpt-4o"
     OPENAI_MODEL: str = "gpt-4o"
+    # API Keys and Feature Flags
     OPENAI_API_KEY: str = ""
+    # SportsAgent Settings
     ENABLE_CHECKPOINTING: bool = False
     DEFAULT_SESSION: str = "default_session"
     SAVE_HTML: bool = False
     SHOW_INTERNAL: bool = True
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 settings = Settings()

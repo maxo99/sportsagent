@@ -2,7 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from sportsagent.models.chatbotstate import ChatbotState, RetrievedData
+from sportsagent.models.chatbotstate import ChatbotState
+from sportsagent.models.retrieveddata import RetrievedData
 from sportsagent.nodes.analyzer.analyzernode import analyzer_node
 
 

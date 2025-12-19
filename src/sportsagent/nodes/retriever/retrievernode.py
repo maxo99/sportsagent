@@ -6,8 +6,9 @@ from sportsagent.config import setup_logging
 from sportsagent.constants import CURRENT_SEASON
 from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
-from sportsagent.models.chatbotstate import ChatbotState, RetrievedData
+from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import PlayerStatsQuery, QueryFilters, TeamStatsQuery
+from sportsagent.models.retrieveddata import RetrievedData
 
 logger = setup_logging(__name__)
 
@@ -157,12 +158,13 @@ def fetch_team_statistics(tsq: TeamStatsQuery) -> pd.DataFrame | None:
 
 def retrieve_data_sync(state: ChatbotState) -> ChatbotState:
     try:
-        loop = asyncio.get_event_loop()
+        return asyncio.run(retrieve_data(state))
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Fallback for when we are already in an event loop (e.g. nested execution)
+        # Note: This might happen in some test environments or if called from async code
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(retrieve_data(state))
 
-    return loop.run_until_complete(retrieve_data(state))
 
 
 def retriever_node(state: ChatbotState) -> ChatbotState:
@@ -179,6 +181,10 @@ def retriever_node(state: ChatbotState) -> ChatbotState:
             if state.parsed_query:
                 state.error = ErrorStates.NO_DATA_FOUND
                 state.generated_response = "No statistics found for the requested player(s)."
+    except ChatbotError as e:
+        logger.error(f"Chatbot error in retriever node: {e.message}")
+        state.error = e.error_type
+        state.generated_response = e.message
     except Exception as e:
         logger.error(f"Unexpected error in retriever node: {e}")
         state.error = ErrorStates.RETRIEVAL_ERROR

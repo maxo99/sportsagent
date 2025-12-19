@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import patch
 
-from sportsagent.models.chatbotstate import ChatbotState, RetrievedData
+from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import ParsedQuery, PlayerStatsQuery, TeamStatsQuery, TimePeriod
+from sportsagent.models.retrieveddata import RetrievedData
 from sportsagent.nodes.queryparser.queryparsernode import (
     _extract_context_from_history,
     query_parser_node,
@@ -35,18 +36,19 @@ def _state(user_query: str) -> ChatbotState:
 
 def test_query_parser_node_sets_pending_action_and_visualization_flag_for_retrieve() -> None:
     parsed = ParsedQuery(
-        workflow_intent="retrieve",
-        wants_visualization=True,
+        workflowIntent="retrieve",
+        wantsVisualization=True,
         query_intent="player_stats",
         player_stats_query=PlayerStatsQuery(
             players=["Josh Allen"],
             statistics=["passing_yards"],
-            tp=TimePeriod(seasons=[2024]),
+            timePeriod=TimePeriod(seasons=[2024]),
         ),
     )
 
     with patch(
-        "sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI", return_value=_DummyStructuredLLM(parsed)
+        "sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI",
+        return_value=_DummyStructuredLLM(parsed),
     ):
         state = query_parser_node(_state("Show me Josh Allen passing yards 2024 as a chart"))
 
@@ -57,18 +59,19 @@ def test_query_parser_node_sets_pending_action_and_visualization_flag_for_retrie
 
 def test_query_parser_node_overrides_rechart_if_it_includes_stats_query() -> None:
     parsed = ParsedQuery(
-        workflow_intent="rechart",
-        wants_visualization=True,
+        workflowIntent="rechart",
+        wantsVisualization=True,
         query_intent="player_stats",
         player_stats_query=PlayerStatsQuery(
             players=["Josh Allen"],
             statistics=["passing_yards"],
-            tp=TimePeriod(seasons=[2024]),
+            timePeriod=TimePeriod(seasons=[2024]),
         ),
     )
 
     with patch(
-        "sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI", return_value=_DummyStructuredLLM(parsed)
+        "sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI",
+        return_value=_DummyStructuredLLM(parsed),
     ):
         state = query_parser_node(_state("Instead show Josh Allen passing yards 2024"))
 
@@ -78,19 +81,20 @@ def test_query_parser_node_overrides_rechart_if_it_includes_stats_query() -> Non
 
 def test_query_parser_node_overrides_rechart_to_enrich_if_enrichment_present() -> None:
     parsed = ParsedQuery(
-        workflow_intent="rechart",
-        wants_visualization=True,
-        enrichment_datasets=["snap_counts"],
+        workflowIntent="rechart",
+        wantsVisualization=True,
+        enrichmentDatasets=["snap_counts"],
         query_intent="team_stats",
         team_stats_query=TeamStatsQuery(
             teams=["ALL"],
             statistics=["passing_yards"],
-            tp=TimePeriod(seasons=[2024]),
+            timePeriod=TimePeriod(seasons=[2024]),
         ),
     )
 
     with patch(
-        "sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI", return_value=_DummyStructuredLLM(parsed)
+        "sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI",
+        return_value=_DummyStructuredLLM(parsed),
     ):
         state = query_parser_node(_state("Add snap counts and rechart"))
 
@@ -100,7 +104,7 @@ def test_query_parser_node_overrides_rechart_to_enrich_if_enrichment_present() -
 
 def test_should_continue_after_parser_exits_on_rechart_without_loaded_data() -> None:
     state = _state("Make it a scatter plot")
-    state.parsed_query = ParsedQuery(workflow_intent="rechart", wants_visualization=True)
+    state.parsed_query = ParsedQuery(workflowIntent="rechart", wantsVisualization=True)
     state.pending_action = "rechart"
 
     nxt = should_continue_after_parser(state)
@@ -114,7 +118,7 @@ def test_should_continue_after_parser_routes_to_visualization_for_rechart_when_d
     None
 ):
     state = _state("Make it a scatter plot")
-    state.parsed_query = ParsedQuery(workflow_intent="rechart", wants_visualization=True)
+    state.parsed_query = ParsedQuery(workflowIntent="rechart", wantsVisualization=True)
     state.pending_action = "rechart"
     state.retrieved_data = RetrievedData(players=[{"player": "X"}])
 

@@ -5,56 +5,12 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from sportsagent.models.chatboterror import ErrorStates
 from sportsagent.models.parsedquery import ParsedQuery
+from sportsagent.models.retrieveddata import RetrievedData
 
 type ConversationHistory = list[dict[str, Any]]
 type PendingAction = Literal["retrieve", "enrich", "rechart"]
 type ApprovalResult = Literal["approved", "denied"]
 
-
-class RetrievedData(BaseModel):
-    players: list[dict[str, Any]] = Field(default_factory=list)
-    teams: list[dict[str, Any]] = Field(default_factory=list)
-    extra: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
-
-    def items(self):
-        """Iterate over non-empty datasets."""
-        if self.players:
-            yield "players", self.players
-        if self.teams:
-            yield "teams", self.teams
-        for key, value in self.extra.items():
-            if value:
-                yield key, value
-
-    def keys(self):
-        """Return keys of non-empty datasets."""
-        keys = []
-        if self.players:
-            keys.append("players")
-        if self.teams:
-            keys.append("teams")
-        keys.extend([k for k, v in self.extra.items() if v])
-        return keys
-
-    def __len__(self):
-        """Return number of non-empty datasets."""
-        return (
-            (1 if self.players else 0)
-            + (1 if self.teams else 0)
-            + sum(1 for v in self.extra.values() if v)
-        )
-
-    def add_player_data(self, data: list[dict[str, Any]]) -> None:
-        self.players.extend(data)
-
-    def add_team_data(self, data: list[dict[str, Any]]) -> None:
-        self.teams.extend(data)
-
-    def set_dataset(self, key: str, data: list[dict[str, Any]]) -> None:
-        self.extra[key] = data
-
-    def add_to_dataset(self, key: str, data: list[dict[str, Any]]) -> None:
-        self.extra.setdefault(key, []).extend(data)
 
 
 class ChatbotState(BaseModel):
