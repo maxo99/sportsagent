@@ -7,7 +7,7 @@ from sportsagent.constants import CURRENT_SEASON
 from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.models.parsedquery import PlayerStatsQuery, QueryFilters, TeamStatsQuery
+from sportsagent.models.parsedquery import ChartSpec, PlayerStatsQuery, QueryFilters, TeamStatsQuery
 from sportsagent.models.retrieveddata import RetrievedData
 
 logger = setup_logging(__name__)
@@ -28,7 +28,33 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
         if pq.needs_clarification:
             return state
 
-        if state.pending_action == "enrich":
+        # 1. Base Retrieval
+        if state.pending_action in ["retrieve", "rechart"] or state.retrieved_data is None:
+            if state.retrieved_data is None or pq.retrieval_merge_intent.mode == "replace":
+                retrieved_data = RetrievedData()
+            else:
+                retrieved_data = state.retrieved_data
+
+            if psq := pq.player_stats_query:
+                player_data = fetch_player_statistics(psq)
+                if player_data is not None:
+                    records = player_data.to_dict(orient="records")
+                    retrieved_data.add_player_data(
+                        [{str(k): v for k, v in record.items()} for record in records],
+                    )
+
+            if tsq := pq.team_stats_query:
+                team_data = fetch_team_statistics(tsq)
+                if team_data is not None:
+                    records = team_data.to_dict(orient="records")
+                    retrieved_data.add_team_data(
+                        [{str(k): v for k, v in record.items()} for record in records],
+                    )
+
+            state.retrieved_data = retrieved_data
+
+        # 2. Enrichment Retrieval
+        if pq.enrichment_datasets:
             if state.retrieved_data is None:
                 state.retrieved_data = RetrievedData()
 
@@ -38,19 +64,13 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
             elif pq.team_stats_query and pq.team_stats_query.tp.seasons:
                 seasons = pq.team_stats_query.tp.seasons
 
-            if not pq.enrichment_datasets:
-                raise ChatbotError(
-                    error_type=ErrorStates.PARSING_ERROR,
-                    message="No enrichment datasets specified.",
-                    details={"workflow_intent": pq.workflow_intent},
-                    recoverable=True,
-                )
-
             for dataset in pq.enrichment_datasets:
                 if dataset == "rosters":
                     df = NFL_DATASOURCE.get_rosters(seasons=seasons)
                 elif dataset == "snap_counts":
                     df = NFL_DATASOURCE.get_snap_counts(seasons=seasons)
+                elif dataset == "player_info":
+                    df = NFL_DATASOURCE.get_player_data()
                 else:
                     continue
 
@@ -60,42 +80,26 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
                     [{str(k): v for k, v in record.items()} for record in records],
                 )
 
+            # Optional automatic merging if join keys are provided
+            if pq.enrichment_options.join_keys and state.retrieved_data:
+                _perform_automatic_merges(state)
+
             logger.info(f"Successfully enriched data. Keys: {state.retrieved_data.keys()}")
-            return state
 
-        retrieved_data = RetrievedData()
-
-        if psq := pq.player_stats_query:
-            player_data = fetch_player_statistics(psq)
-            if player_data is not None:
-                records = player_data.to_dict(orient="records")
-                retrieved_data.add_player_data(
-                    [{str(k): v for k, v in record.items()} for record in records],
-                )
-
-        if tsq := pq.team_stats_query:
-            team_data = fetch_team_statistics(tsq)
-            if team_data is not None:
-                records = team_data.to_dict(orient="records")
-                retrieved_data.add_team_data(
-                    [{str(k): v for k, v in record.items()} for record in records],
-                )
-
-        if not retrieved_data.players and not retrieved_data.teams:
+        # 3. Final Validation
+        if state.retrieved_data is None or len(state.retrieved_data) == 0:
             raise ChatbotError(
                 error_type=ErrorStates.NO_DATA_FOUND,
                 message="No statistics found for the requested player(s), position(s), or team(s)",
                 details={
-                    "players": psq.players if psq else None,
-                    "positions": psq.position if psq else None,
-                    "teams": tsq.teams if tsq else None,
-                    "season": psq.tp.seasons if psq else None,
+                    "players": pq.player_stats_query.players if pq.player_stats_query else None,
+                    "teams": pq.team_stats_query.teams if pq.team_stats_query else None,
+                    "season": pq.player_stats_query.tp.seasons if pq.player_stats_query else None,
                 },
                 recoverable=True,
             )
 
-        state.retrieved_data = retrieved_data
-        logger.info(f"Successfully retrieved data. Keys: {state.retrieved_data.keys()}")
+        logger.info(f"Successfully retrieved/enriched data. Keys: {state.retrieved_data.keys()}")
         return state
 
     except ChatbotError:
@@ -164,7 +168,6 @@ def retrieve_data_sync(state: ChatbotState) -> ChatbotState:
         # Note: This might happen in some test environments or if called from async code
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(retrieve_data(state))
-
 
 
 def retriever_node(state: ChatbotState) -> ChatbotState:
@@ -277,26 +280,25 @@ def normalize_data_format(df: pd.DataFrame) -> pd.DataFrame:
 
 def aggregate_data(
     df: pd.DataFrame,
-    aggregation: str | None = None,
-    group_by: list[str] | None = None,
+    chart_spec: ChartSpec | None = None,
 ) -> pd.DataFrame:
     """
-    Aggregate data based on query requirements.
+    Aggregate data based on chart specification.
 
     Args:
-        df: DataFrame with player statistics
-        aggregation: Type of aggregation ('sum', 'average', 'max', 'min')
-        group_by: Columns to group by before aggregation
+        df: DataFrame with statistics
+        chart_spec: Chart specifications including aggregation and grouping
 
     Returns:
         Aggregated DataFrame
     """
-    if aggregation is None or df.empty:
+    if chart_spec is None or chart_spec.aggregation is None or df.empty:
         return df
 
-    # Default grouping by player if not specified
-    if group_by is None:
-        group_by = ["player_name"]
+    # Default grouping by x_axis if not specified
+    group_by = [chart_spec.x_axis]
+    if chart_spec.group_by:
+        group_by.append(chart_spec.group_by)
 
     # Ensure group_by columns exist
     group_by = [col for col in group_by if col in df.columns]
@@ -316,16 +318,13 @@ def aggregate_data(
     # Perform aggregation
     agg_func_map = {
         "sum": "sum",
-        "average": "mean",
-        "avg": "mean",
         "mean": "mean",
         "max": "max",
-        "maximum": "max",
         "min": "min",
-        "minimum": "min",
+        "count": "count",
     }
 
-    agg_func = agg_func_map.get(aggregation.lower(), "sum")
+    agg_func = agg_func_map.get(chart_spec.aggregation.lower(), "sum")
 
     try:
         result = df.groupby(group_by)[agg_cols].agg(agg_func).reset_index()
@@ -333,3 +332,64 @@ def aggregate_data(
     except Exception as e:
         logger.warning(f"Aggregation failed: {e}. Returning original data.")
         return df
+
+
+def _perform_automatic_merges(state: ChatbotState) -> None:
+    """
+    Helper to merge enrichment data into primary datasets based on join keys.
+    """
+    pq = state.parsed_query
+    if not pq.enrichment_options.join_keys or not state.retrieved_data:
+        return
+
+    # For each enrichment dataset requested
+    for dataset_key in pq.enrichment_datasets:
+        extra_data = state.retrieved_data.extra.get(dataset_key)
+        if not extra_data:
+            continue
+
+        extra_df = pd.DataFrame(extra_data)
+
+        # Try to merge into players if applicable
+        if state.retrieved_data.players:
+            players_df = pd.DataFrame(state.retrieved_data.players)
+            merged = _attempt_merge(players_df, extra_df, pq.enrichment_options.join_keys)
+            if merged is not None:
+                logger.info(f"Successfully merged {dataset_key} into players")
+                state.retrieved_data.players = [
+                    {str(k): v for k, v in record.items()}
+                    for record in merged.to_dict(orient="records")
+                ]
+
+        # Try to merge into teams if applicable
+        if state.retrieved_data.teams:
+            teams_df = pd.DataFrame(state.retrieved_data.teams)
+            merged = _attempt_merge(teams_df, extra_df, pq.enrichment_options.join_keys)
+            if merged is not None:
+                logger.info(f"Successfully merged {dataset_key} into teams")
+                state.retrieved_data.teams = [
+                    {str(k): v for k, v in record.items()}
+                    for record in merged.to_dict(orient="records")
+                ]
+
+
+def _attempt_merge(
+    primary_df: pd.DataFrame, extra_df: pd.DataFrame, join_keys: list[str]
+) -> pd.DataFrame | None:
+    """
+    Attempts to merge extra_df into primary_df using provided join_keys.
+    Handles potentially different column names in join_keys (if colon separated).
+    """
+    for key_pair in join_keys:
+        if ":" in key_pair:
+            left_key, right_key = key_pair.split(":", 1)
+        else:
+            left_key, right_key = key_pair, key_pair
+
+        if left_key in primary_df.columns and right_key in extra_df.columns:
+            try:
+                # Use left join to preserve all primary records
+                return primary_df.merge(extra_df, left_on=left_key, right_on=right_key, how="left")
+            except Exception as e:
+                logger.warning(f"Merge failed on {left_key}/{right_key}: {e}")
+    return None

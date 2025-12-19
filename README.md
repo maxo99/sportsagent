@@ -38,6 +38,7 @@ This project showcases two distinct HITL patterns:
 Managing state in a complex agentic workflow is critical. We use a custom Pydantic model `ChatbotState` that tracks:
 
 - **`retrieved_data`**: Stores base datasets (`players`, `teams`) plus optional enrichment datasets (e.g., `rosters`, `snap_counts`) attached under an `extra` mapping.
+- **Structured Intent**: Uses Pydantic models (`ChartSpec`, `RetrievalMergeIntent`) to capture precise user requests, ensuring nodes operate on unambiguous structured data rather than free-text.
 - **`visualization`**: Stores the generated Plotly figure as a JSON-serialized dictionary, allowing it to be passed between nodes and rendered by the frontend without pickling issues.
 
 ## Key Components

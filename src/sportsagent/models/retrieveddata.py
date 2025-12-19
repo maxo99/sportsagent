@@ -2,12 +2,12 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
+type DataFrameData = list[dict[str, Any]]
 
 class RetrievedData(BaseModel):
-    players: list[dict[str, Any]] = Field(default_factory=list)
-    teams: list[dict[str, Any]] = Field(default_factory=list)
-    extra: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
+    players: DataFrameData = Field(default_factory=list)
+    teams: DataFrameData = Field(default_factory=list)
+    extra: dict[str, DataFrameData] = Field(default_factory=dict)
 
     def items(self):
         """Iterate over non-empty datasets."""

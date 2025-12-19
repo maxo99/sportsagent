@@ -1,11 +1,6 @@
-import base64
 import json
-from io import BytesIO
 
-import matplotlib.pyplot as plt
-import numpy as np
 import plotly.io as pio
-from PIL import Image
 
 # @lru_cache
 # def get_prompt_template(template_name: str) -> Template:
@@ -23,53 +18,53 @@ from PIL import Image
 #     }
 
 
-def matplotlib_from_base64(
-    encoded: str,
-    title: str | None = None,
-    figsize: tuple = (8, 6),
-):
-    """
-    Convert a base64-encoded image to a matplotlib plot and display it.
+# def matplotlib_from_base64(
+#     encoded: str,
+#     title: str | None = None,
+#     figsize: tuple = (8, 6),
+# ):
+#     """
+#     Convert a base64-encoded image to a matplotlib plot and display it.
 
-    Parameters:
-    -----------
-    encoded : str
-        The base64-encoded image string.
-    title : str, optional
-        A title for the plot. Default is None.
-    figsize : tuple, optional
-        Figure size (width, height) for the plot. Default is (8, 6).
+#     Parameters:
+#     -----------
+#     encoded : str
+#         The base64-encoded image string.
+#     title : str, optional
+#         A title for the plot. Default is None.
+#     figsize : tuple, optional
+#         Figure size (width, height) for the plot. Default is (8, 6).
 
-    Returns:
-    --------
-    fig, ax : tuple
-        The matplotlib figure and axes objects.
-    """
-    # Decode the base64 string to bytes
-    img_data = base64.b64decode(encoded)
+#     Returns:
+#     --------
+#     fig, ax : tuple
+#         The matplotlib figure and axes objects.
+#     """
+#     # Decode the base64 string to bytes
+#     img_data = base64.b64decode(encoded)
 
-    # Load the bytes data into a BytesIO buffer
-    buf = BytesIO(img_data)
+#     # Load the bytes data into a BytesIO buffer
+#     buf = BytesIO(img_data)
 
-    # Open the image using Pillow
-    img = Image.open(buf)
+#     # Open the image using Pillow
+#     img = Image.open(buf)
 
-    # Create a matplotlib figure and axis
-    fig, ax = plt.subplots(figsize=figsize)
-    # Display the image
-    ax.imshow(np.array(img))
-    # ax.imshow(np.array(img))
+#     # Create a matplotlib figure and axis
+#     fig, ax = plt.subplots(figsize=figsize)
+#     # Display the image
+#     ax.imshow(np.array(img))
+#     # ax.imshow(np.array(img))
 
-    ax.axis("off")  # Hide the axis
-    ax.axis("off")  # Hide the axis
+#     ax.axis("off")  # Hide the axis
+#     ax.axis("off")  # Hide the axis
 
-    if title:
-        ax.set_title(title)
+#     if title:
+#         ax.set_title(title)
 
-    # Show the plot
-    plt.show()
+#     # Show the plot
+#     plt.show()
 
-    return fig, ax
+#     return fig, ax
 
 
 def plotly_from_dict(plotly_graph_dict: dict):

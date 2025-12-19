@@ -1,5 +1,5 @@
 import re
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -56,10 +56,28 @@ class StatisticsQuery(BaseModel):
         alias="timePeriod",
     )
 
-    # filters: QueryFilters = Field(
-    #     default_factory=QueryFilters,
-    #     description="Additional query filters",
-    # )
+
+class ChartSpec(BaseModel):
+    x_axis: str = Field(description="Column name for the x-axis")
+    y_axis: str = Field(description="Column name for the y-axis")
+    group_by: str | None = Field(
+        default=None, description="Column name for grouping (color/legend)"
+    )
+    aggregation: Literal["sum", "mean", "max", "min", "count"] | None = Field(
+        default=None, description="Aggregation to apply to y-axis"
+    )
+    title: str | None = Field(default=None, description="Title for the chart")
+
+
+class RetrievalMergeIntent(BaseModel):
+    mode: Literal["replace", "append"] = Field(
+        default="replace", description="Whether to replace current data or append to it"
+    )
+
+
+class EnrichmentOptions(BaseModel):
+    filters: dict[str, Any] = Field(default_factory=dict)
+    join_keys: list[str] = Field(default_factory=list)
 
 
 class PlayerStatsQuery(StatisticsQuery):
@@ -68,9 +86,13 @@ class PlayerStatsQuery(StatisticsQuery):
         description="List of specific player names mentioned",
     )
     position: str | None = Field(
-        default=None, description="Position mentioned (e.g., ALL, QB, RB, WR, TE, K)"
+        default=None,
+        description="Position mentioned (e.g., ALL, QB, RB, WR, TE, K)",
     )
-    teams: list[str] = Field(default_factory=list, description="List of team names mentioned")
+    teams: list[str] = Field(
+        default_factory=list,
+        description="List of team names mentioned",
+    )
 
     @field_validator("players", mode="before")
     def validate_players(cls, v):
@@ -202,11 +224,22 @@ class ParsedQuery(BaseModel):
         default=None,
         description="Details specific to team statistics queries",
     )
-
-    aggregation: str | None = Field(
+    chart_spec: "ChartSpec | None" = Field(
         default=None,
-        description="Aggregation type: 'sum', 'average', 'max', 'min'",
+        description="Specifications for generating a chart",
+        alias="chartSpec",
     )
+    retrieval_merge_intent: "RetrievalMergeIntent" = Field(
+        default_factory=lambda: RetrievalMergeIntent(mode="replace"),
+        description="Whether to replace current data or append to it",
+        alias="retrievalMergeIntent",
+    )
+    enrichment_options: "EnrichmentOptions" = Field(
+        default_factory=lambda: EnrichmentOptions(),
+        description="Options for data enrichment",
+        alias="enrichmentOptions",
+    )
+
     clarification_question: str | None = Field(
         default=None,
         description="Question to ask user for clarification if parse_status is 'needs_clarification'",
@@ -230,12 +263,12 @@ class ParsedQuery(BaseModel):
         description="Whether the user is asking for a chart/plot.",
         alias="wantsVisualization",
     )
-    enrichment_datasets: list[Literal["rosters", "snap_counts", "schedules", "participation"]] = (
-        Field(
-            default_factory=list,
-            description="Optional enrichment datasets to fetch and attach to retrieved_data.",
-            alias="enrichmentDatasets",
-        )
+    enrichment_datasets: list[
+        Literal["rosters", "snap_counts", "schedules", "participation", "player_info"]
+    ] = Field(
+        default_factory=list,
+        description="Optional enrichment datasets to fetch and attach to retrieved_data.",
+        alias="enrichmentDatasets",
     )
 
     @property

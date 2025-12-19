@@ -42,7 +42,13 @@ def generate_visualization_node(state: ChatbotState) -> ChatbotState:
         llm = ChatOpenAI(model=settings.OPENAI_MODEL)
 
         template = get_visualization_template("visualization_instruction.j2")
-        prompt_text = template.render(query=state.user_query, data_summary=data_summary)
+        prompt_text = template.render(
+            query=state.user_query,
+            data_summary=data_summary,
+            chart_spec=state.parsed_query.chart_spec.model_dump()
+            if state.parsed_query.chart_spec
+            else None,
+        )
 
         chain = llm | StrOutputParser()
 

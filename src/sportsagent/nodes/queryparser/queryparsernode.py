@@ -135,7 +135,7 @@ async def _parse_query(state: ChatbotState) -> ChatbotState:
 
         llm = ChatOpenAI(model=settings.OPENAI_MODEL)
 
-        structured_llm = llm.with_structured_output(ParsedQuery)
+        structured_llm = llm.with_structured_output(ParsedQuery, method="function_calling")
 
         parsed_result = structured_llm.invoke(
             input=[

@@ -171,3 +171,17 @@ class NFLReadPyDataSource:
         except Exception as e:
             logger.error(f"Error retrieving snap counts from nflreadpy: {e}")
             raise RetrievalError(message=f"Failed to retrieve snap counts: {str(e)}") from e
+
+
+
+    def get_player_data(
+        self,
+    ) -> pd.DataFrame:
+        try:
+            logger.info("Retrieving player data")
+            df = nfl.load_players().to_pandas()
+            logger.info(f"Retrieved player data shape {df.shape} cols: {list(df.columns)}")
+            return df
+        except Exception as e:
+            logger.error(f"Error retrieving player data from nflreadpy: {e}")
+            raise RetrievalError(message=f"Failed to retrieve player data: {str(e)}") from e
