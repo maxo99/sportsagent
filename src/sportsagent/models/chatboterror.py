@@ -50,6 +50,7 @@ class RetrievalError(ChatbotError):
             recoverable=recoverable,
         )
 
+
 class ParsingError(ChatbotError):
     def __init__(
         self,

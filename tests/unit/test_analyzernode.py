@@ -2,11 +2,11 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.nodes.analyzernode import analyzer_node
+from sportsagent.models.chatbotstate import ChatbotState, RetrievedData
+from sportsagent.nodes.analyzer.analyzernode import analyzer_node
 
 
-@patch("sportsagent.nodes.analyzernode.AnalyzerAgent")
+@patch("sportsagent.nodes.analyzer.analyzernode.AnalyzerAgent")
 def test_analyzer_node_handles_dict_data(mock_agent_cls):
     # Setup mock agent
     mock_agent = MagicMock()
@@ -18,15 +18,15 @@ def test_analyzer_node_handles_dict_data(mock_agent_cls):
     state = ChatbotState(
         session_id="test",
         user_query="analyze this",
-        retrieved_data={
-            "players": [{"name": "P1", "yards": 100}],
-            "teams": [{"team": "T1", "wins": 5}],
-        },
+        retrieved_data=RetrievedData(
+            players=[{"name": "P1", "yards": 100}],
+            teams=[{"team": "T1", "wins": 5}],
+        ),
         generated_response="",
     )
 
     # Run node
-    result_state = analyzer_node(state)
+    analyzer_node(state)
 
     # Verify agent was called
     mock_agent.invoke_agent.assert_called_once()
@@ -38,7 +38,7 @@ def test_analyzer_node_handles_dict_data(mock_agent_cls):
     assert "name" in data_raw.columns  # Should be the players dataframe
 
 
-@patch("sportsagent.nodes.analyzernode.AnalyzerAgent")
+@patch("sportsagent.nodes.analyzer.analyzernode.AnalyzerAgent")
 def test_analyzer_node_handles_teams_only(mock_agent_cls):
     # Setup mock agent
     mock_agent = MagicMock()
@@ -50,12 +50,12 @@ def test_analyzer_node_handles_teams_only(mock_agent_cls):
     state = ChatbotState(
         session_id="test",
         user_query="analyze teams",
-        retrieved_data={"teams": [{"team": "T1", "wins": 5}]},
+        retrieved_data=RetrievedData(teams=[{"team": "T1", "wins": 5}]),
         generated_response="",
     )
 
     # Run node
-    result_state = analyzer_node(state)
+    analyzer_node(state)
 
     # Verify primary_df selection logic
     call_args = mock_agent.invoke_agent.call_args

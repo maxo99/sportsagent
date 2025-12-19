@@ -22,6 +22,7 @@ dependencies = [
     "langchain-mcp-adapters",
     "pydantic-settings>=2.12.0",
     "plotly>=6.5.0",
+    "jinja2>=3.1.4",
     "ipython>=9.7.0",
     "matplotlib>=3.10.7",
     "langsmith>=0.4.49",
@@ -33,6 +34,7 @@ dependencies = [
 dev = [
     "sportsagent",
     "pytest>=8.4.1",
+    "pytest-cov>=6.0.0",
     "nbdime>=4.0.2",
     "ruff>=0.6.1",
     "mypy>=1.11.1",
@@ -44,6 +46,7 @@ dev = [
 dev = [
     "sportsagent",
     "pytest>=8.4.1",
+    "pytest-cov>=6.0.0",
     "ipykernel>=7.1.0",
     "nbdime>=4.0.2",
 ]
@@ -190,3 +193,12 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["sportsagent"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80

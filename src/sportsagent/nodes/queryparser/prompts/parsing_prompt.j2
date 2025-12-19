@@ -20,6 +20,17 @@ Domain Logic & Assumptions:
     - Default to `summary_level="reg"` (regular season totals) for all other cases.
     - If no season is mentioned, use {{ current_season }}.
 
+- **Workflow Intent**:
+    - Set `workflow_intent="rechart"` ONLY when the user is modifying the chart presentation while keeping the same underlying metric/data (e.g., "make it a scatter plot", "switch bar to line", "change x-axis", "group by team", "facet by week").
+        - For `workflow_intent="rechart"`: leave `player_stats_query` and `team_stats_query` as `null`.
+        - Set `wants_visualization=true`.
+    - If the user is changing the metric/statistic (e.g., "instead show me defensive_tds", "now show passing yards"), this is NOT `rechart`.
+        - Treat it as a normal retrieval by populating the appropriate `*_stats_query` and keeping `workflow_intent="retrieve"`.
+    - Set `workflow_intent="enrich"` when the user requests additional supporting datasets needed to analyze/aggregate the currently loaded stats (e.g., "add snap counts", "join rosters", "include participation").
+        - Populate `enrichment_datasets` with one or more of: `rosters`, `snap_counts`, `schedules`, `participation`.
+    - Otherwise, keep the default `workflow_intent="retrieve"`.
+        - If the user asks to plot/chart as part of a new retrieval, set `wants_visualization=true`.
+
 IMPORTANT CONTEXT RESOLUTION FOR FOLLOW-UP QUESTIONS:
 - If the query uses pronouns (he, his, him, they, their) or references like "that player", "same stat", "those stats", resolve them using the conversation context below.
 - If the query says "compare them", "how about", "what about", "and him", it likely refers to previously mentioned players.

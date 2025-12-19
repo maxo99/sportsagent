@@ -4,12 +4,12 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from sportsagent import utils
 from sportsagent.config import settings, setup_logging
 from sportsagent.constants import CURRENT_SEASON
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState, ConversationHistory
 from sportsagent.models.parsedquery import ParsedQuery
+from sportsagent.nodes.queryparser import get_queryparser_template
 
 logger = setup_logging(__name__)
 
@@ -18,7 +18,19 @@ def query_parser_node(state: ChatbotState) -> ChatbotState:
     logger.info("Parsing user query")
 
     try:
+        state.approval_result = None
         state = _parse_query_sync(state)
+        if state.parsed_query:
+            pending_action = state.parsed_query.workflow_intent
+            if pending_action == "rechart" and (
+                state.parsed_query.player_stats_query is not None
+                or state.parsed_query.team_stats_query is not None
+                or bool(state.parsed_query.enrichment_datasets)
+            ):
+                pending_action = "enrich" if state.parsed_query.enrichment_datasets else "retrieve"
+
+            state.pending_action = pending_action
+            state.needs_visualization = bool(state.parsed_query.wants_visualization)
         logger.info(
             f"Successfully parsed query.intent - {state.parsed_query.query_intent if state.parsed_query else 'unknown'}"
         )
@@ -35,12 +47,12 @@ def query_parser_node(state: ChatbotState) -> ChatbotState:
 
 def _parse_query_sync(state: ChatbotState) -> ChatbotState:
     try:
-        loop = asyncio.get_event_loop()
+        return asyncio.run(_parse_query(state))
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    return loop.run_until_complete(_parse_query(state))
+        # Fallback for when we are already in an event loop (e.g. nested execution)
+        # Note: This might happen in some test environments or if called from async code
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(_parse_query(state))
 
 
 def _extract_context_from_history(
@@ -61,13 +73,21 @@ def _extract_context_from_history(
     for turn in recent_turns:
         if "mentioned_players" in turn:
             context["recent_players"].extend(turn["mentioned_players"])
+
         if "mentioned_stats" in turn:
             context["recent_stats"].extend(turn["mentioned_stats"])
+        if "mentioned_players_stats" in turn:
+            context["recent_stats"].extend(turn["mentioned_players_stats"])
+        if "mentioned_teams_stats" in turn:
+            context["recent_stats"].extend(turn["mentioned_teams_stats"])
 
-        # Capture raw conversation flow
-        if "content" in turn:
+        if "role" in turn and "content" in turn:
+            role = str(turn["role"]).lower()
+            label = "Assistant" if role == "assistant" else "User"
+            context["messages"].append(f"{label}: {turn['content']}")
+
+        if "content" in turn and "response" in turn:
             context["messages"].append(f"User: {turn['content']}")
-        if "response" in turn:
             context["messages"].append(f"Assistant: {turn['response']}")
 
     # Remove duplicates while preserving order
@@ -78,7 +98,7 @@ def _extract_context_from_history(
 
 
 def _build_parsing_prompt(user_query: str, context: dict[str, Any]) -> str:
-    prompt = utils.get_prompt_template("parsing_prompt.j2").render(
+    prompt = get_queryparser_template("parsing_prompt.j2").render(
         current_season=CURRENT_SEASON,
     )
 
@@ -98,7 +118,7 @@ def _build_parsing_prompt(user_query: str, context: dict[str, Any]) -> str:
 
         prompt += "\n\n**This appears to be a follow-up question. Use the context above to fill in missing information.**"
 
-    prompt += utils.get_prompt_template("ambiguity_handling.j2").render(
+    prompt += get_queryparser_template("ambiguity_handling.j2").render(
         user_query=user_query,
     )
     return prompt

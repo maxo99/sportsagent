@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.nodes.visualizationnode import (
+from sportsagent.nodes.visualization.visualizationnode import (
     execute_visualization_node,
     generate_visualization_node,
 )
@@ -20,7 +20,7 @@ def mock_state():
     return state
 
 
-@patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
+@patch("sportsagent.nodes.visualization.visualizationnode.ChatOpenAI")
 def test_visualization_flow_success(mock_chat_openai, mock_state):
     # Mock the LLM chain response
     mock_llm = MagicMock()
@@ -51,7 +51,7 @@ def generate_plot(df):
     assert isinstance(final_state.visualization, dict)
 
 
-@patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
+@patch("sportsagent.nodes.visualization.visualizationnode.ChatOpenAI")
 def test_visualization_node_no_data(mock_chat_openai, mock_state):
     mock_state.retrieved_data = {}
 
@@ -60,7 +60,7 @@ def test_visualization_node_no_data(mock_chat_openai, mock_state):
     assert new_state.visualization_code is None
 
 
-@patch("sportsagent.nodes.visualizationnode.ChatOpenAI")
+@patch("sportsagent.nodes.visualization.visualizationnode.ChatOpenAI")
 def test_visualization_node_not_needed(mock_chat_openai, mock_state):
     mock_state.needs_visualization = False
 

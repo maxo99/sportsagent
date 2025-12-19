@@ -22,10 +22,18 @@ def exit_node(state: ChatbotState) -> ChatbotState:
         "role": "user",
         "content": state.user_query,
         "response": state.generated_response,
-        "mentioned_players": state.parsed_query.player_stats_query.players if state.parsed_query and state.parsed_query.player_stats_query else [],
-        "mentioned_players_stats": state.parsed_query.player_stats_query.statistics if state.parsed_query and state.parsed_query.player_stats_query else [],
-        "mentioned_teams_stats": state.parsed_query.team_stats_query.statistics if state.parsed_query and state.parsed_query.team_stats_query else [],
-        "mentioned_teams": state.parsed_query.team_stats_query.teams if state.parsed_query and state.parsed_query.team_stats_query else [],
+        "mentioned_players": state.parsed_query.player_stats_query.players
+        if state.parsed_query and state.parsed_query.player_stats_query
+        else [],
+        "mentioned_players_stats": state.parsed_query.player_stats_query.statistics
+        if state.parsed_query and state.parsed_query.player_stats_query
+        else [],
+        "mentioned_teams_stats": state.parsed_query.team_stats_query.statistics
+        if state.parsed_query and state.parsed_query.team_stats_query
+        else [],
+        "mentioned_teams": state.parsed_query.team_stats_query.teams
+        if state.parsed_query and state.parsed_query.team_stats_query
+        else [],
     }
     state.conversation_history.append(new_turn)
 

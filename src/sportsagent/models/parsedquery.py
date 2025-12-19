@@ -1,7 +1,7 @@
 import re
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from sportsagent.constants import (
     CURRENT_SEASON,
@@ -10,8 +10,8 @@ from sportsagent.constants import (
     STAT_MAPPINGS,
     TEAM_ABBREVIATIONS,
     TEAM_MAPPINGS,
-    TEAMS_STATS,
     TEAMS_STATS_COMMON,
+    TEAMS_STATS_MAP,
 )
 
 
@@ -44,6 +44,8 @@ class QueryFilters(BaseModel):
 
 
 class StatisticsQuery(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     statistics: list[str] = Field(
         default_factory=list,
         description="Statistical categories requested (e.g., 'passing_yards', 'touchdowns', 'completion_rate')",
@@ -186,10 +188,12 @@ class TeamStatsQuery(StatisticsQuery):
         """
         if self.statistics:
             return [*TEAMS_STATS_COMMON, *self.statistics]
-        return TEAMS_STATS.get("ALL", [])
+        return TEAMS_STATS_MAP.get("ALL", [])
 
 
 class ParsedQuery(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     player_stats_query: PlayerStatsQuery | None = Field(
         default=None,
         description="Details specific to player statistics queries",
@@ -197,7 +201,6 @@ class ParsedQuery(BaseModel):
     team_stats_query: TeamStatsQuery | None = Field(
         default=None,
         description="Details specific to team statistics queries",
-        alias="teamStatsQuery",
     )
 
     aggregation: str | None = Field(
@@ -215,6 +218,24 @@ class ParsedQuery(BaseModel):
     query_intent: str = Field(
         default="player_stats",
         description="Intent: 'player_stats', 'team_stats' ",
+    )
+
+    workflow_intent: Literal["retrieve", "rechart", "enrich"] = Field(
+        default="retrieve",
+        description="Workflow intent: retrieve new base stats, rechart using existing data, or enrich existing data.",
+        alias="workflowIntent",
+    )
+    wants_visualization: bool = Field(
+        default=False,
+        description="Whether the user is asking for a chart/plot.",
+        alias="wantsVisualization",
+    )
+    enrichment_datasets: list[Literal["rosters", "snap_counts", "schedules", "participation"]] = (
+        Field(
+            default_factory=list,
+            description="Optional enrichment datasets to fetch and attach to retrieved_data.",
+            alias="enrichmentDatasets",
+        )
     )
 
     @property
@@ -236,10 +257,6 @@ class ParsedQuery(BaseModel):
     @property
     def needs_clarification(self) -> bool:
         return self.parse_status == "needs_clarification"
-
-
-
-
 
 
 def normalize_player_name(

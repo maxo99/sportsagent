@@ -1,10 +1,10 @@
 import pandas as pd
 
-from sportsagent import utils
-from sportsagent.agents.analyzeragent import AnalyzerAgent
 from sportsagent.config import settings, setup_logging
 from sportsagent.models.chatboterror import UNKNOWN_ERROR_RESPONSE, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
+from sportsagent.nodes.analyzer import get_analyzer_template
+from sportsagent.nodes.analyzer.analyzeragent import AnalyzerAgent
 
 logger = setup_logging(__name__)
 
@@ -44,7 +44,7 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             primary_df = list(data_context.values())[0]
 
         # Prepare instructions with data context
-        user_instructions = utils.get_prompt_template("analyzer_instructions.j2").render(
+        user_instructions = get_analyzer_template("analyzer_instructions.j2").render(
             data_sample=data_sample_str,
             row_count=total_rows,
             user_instructions=state.user_query,
@@ -71,15 +71,17 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             if new_query:
                 logger.info(f"Agent requested more data: {new_query}")
                 state.user_query = new_query
-                state.generated_response = f"__ROUTE_TO_RETRIEVER__: {new_query}"
+                state.pending_action = "retrieve"
+                state.approval_required = True
+                state.approval_result = None
+                state.generated_response = ""
                 return state
 
             logger.warning("Could not find REQUEST_MORE_DATA string despite trigger")
 
         state.generated_response = ai_message
 
-        if any(k in ai_message.lower() for k in ["visualiz", "plot", "chart"]):
-            state.needs_visualization = True
+        state.approval_required = False
 
         logger.info(f"Generated response ({len(state.generated_response)} chars)")
 

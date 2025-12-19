@@ -3,6 +3,7 @@ import asyncio
 import pandas as pd
 
 from sportsagent.config import setup_logging
+from sportsagent.constants import CURRENT_SEASON
 from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState, RetrievedData
@@ -24,6 +25,41 @@ async def retrieve_data(state: ChatbotState) -> ChatbotState:
 
         # Skip retrieval if clarification is needed
         if pq.needs_clarification:
+            return state
+
+        if state.pending_action == "enrich":
+            if state.retrieved_data is None:
+                state.retrieved_data = RetrievedData()
+
+            seasons = [CURRENT_SEASON]
+            if pq.player_stats_query and pq.player_stats_query.tp.seasons:
+                seasons = pq.player_stats_query.tp.seasons
+            elif pq.team_stats_query and pq.team_stats_query.tp.seasons:
+                seasons = pq.team_stats_query.tp.seasons
+
+            if not pq.enrichment_datasets:
+                raise ChatbotError(
+                    error_type=ErrorStates.PARSING_ERROR,
+                    message="No enrichment datasets specified.",
+                    details={"workflow_intent": pq.workflow_intent},
+                    recoverable=True,
+                )
+
+            for dataset in pq.enrichment_datasets:
+                if dataset == "rosters":
+                    df = NFL_DATASOURCE.get_rosters(seasons=seasons)
+                elif dataset == "snap_counts":
+                    df = NFL_DATASOURCE.get_snap_counts(seasons=seasons)
+                else:
+                    continue
+
+                records = df.to_dict(orient="records")
+                state.retrieved_data.set_dataset(
+                    dataset,
+                    [{str(k): v for k, v in record.items()} for record in records],
+                )
+
+            logger.info(f"Successfully enriched data. Keys: {state.retrieved_data.keys()}")
             return state
 
         retrieved_data = RetrievedData()
@@ -103,7 +139,7 @@ def fetch_player_statistics(psq: PlayerStatsQuery) -> pd.DataFrame | None:
         return None
 
 
-def fetch_team_statistics(tsq: TeamStatsQuery)-> pd.DataFrame | None:
+def fetch_team_statistics(tsq: TeamStatsQuery) -> pd.DataFrame | None:
     try:
         team_data = NFL_DATASOURCE.get_team_stats(
             teams=tsq.teams,

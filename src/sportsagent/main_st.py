@@ -219,11 +219,17 @@ with tab_chat:
             with col1:
                 if st.button("Yes, generate chart"):
                     st.session_state["interrupt_state"] = None
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": "User approved chart generation."}
+                    )
                     with st.spinner("Generating visualization code..."):
                         run_workflow(None)  # Resume
             with col2:
                 if st.button("No, skip"):
                     st.session_state["interrupt_state"] = None
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": "User skipped chart generation."}
+                    )
                     config = st.session_state["workflow_config"]
                     graph.update_state(config, {"needs_visualization": False})
                     run_workflow(None)
@@ -242,11 +248,17 @@ with tab_chat:
             with col1:
                 if st.button("Execute Code"):
                     st.session_state["interrupt_state"] = None
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": "User approved chart execution."}
+                    )
                     with st.spinner("Executing visualization..."):
                         run_workflow(None)
             with col2:
                 if st.button("Cancel"):
                     st.session_state["interrupt_state"] = None
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": "User cancelled chart execution."}
+                    )
                     # Skip execution by updating state
                     graph.update_state(config, {"visualization_code": None})
                     run_workflow(None)
@@ -259,15 +271,22 @@ with tab_chat:
             with col1:
                 if st.button("Yes, fetch data"):
                     st.session_state["interrupt_state"] = None
+                    st.session_state["messages"].append(
+                        {"role": "assistant", "content": "User approved data retrieval."}
+                    )
+                    config = st.session_state["workflow_config"]
+                    graph.update_state(config, {"approval_result": "approved"})
                     with st.spinner(f"Fetching data for {query}..."):
                         run_workflow(None)
             with col2:
                 if st.button("No, stop"):
                     st.session_state["interrupt_state"] = None
                     st.session_state["messages"].append(
-                        {"role": "assistant", "content": "Data retrieval cancelled."}
+                        {"role": "assistant", "content": "User denied data retrieval."}
                     )
-                    st.rerun()
+                    config = st.session_state["workflow_config"]
+                    graph.update_state(config, {"approval_result": "denied"})
+                    run_workflow(None)
 
     elif st.session_state.get("interrupt_state") == "save_report":
         config = st.session_state["workflow_config"]
@@ -291,11 +310,17 @@ with tab_chat:
                 with col1:
                     if st.button("Yes, Save Report"):
                         st.session_state["interrupt_state"] = None
+                        st.session_state["messages"].append(
+                            {"role": "assistant", "content": "User approved saving the report."}
+                        )
                         with st.spinner("Saving report..."):
                             run_workflow(None)
                 with col2:
                     if st.button("No, Skip"):
                         st.session_state["interrupt_state"] = None
+                        st.session_state["messages"].append(
+                            {"role": "assistant", "content": "User skipped saving the report."}
+                        )
                         config = st.session_state["workflow_config"]
                         graph.update_state(config, {"skip_save": True})
                         run_workflow(None)
@@ -318,7 +343,7 @@ with tab_chat:
             generated_response="",
             conversation_history=sanitized_history,
             retrieved_data=st.session_state["retrieved_data"],
-            parsed_query=ParsedQuery(parse_status='unparsed')
+            parsed_query=ParsedQuery(parse_status="unparsed"),
         )
 
         with st.spinner("Thinking..."):

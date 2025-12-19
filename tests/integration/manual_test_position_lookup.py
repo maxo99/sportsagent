@@ -2,7 +2,7 @@ import asyncio
 
 from sportsagent.config import setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.nodes.queryparsernode import query_parser_node
+from sportsagent.nodes.queryparser.queryparsernode import query_parser_node
 
 setup_logging(__name__)
 
@@ -26,7 +26,7 @@ def test_position_lookup():
         positions=["QB"], time_period=TimePeriod(season=2023, week=1), query_intent="player_stats"
     )
 
-    with patch("sportsagent.nodes.queryparsernode.ChatOpenAI") as MockChatOpenAI:
+    with patch("sportsagent.nodes.queryparser.queryparsernode.ChatOpenAI") as MockChatOpenAI:
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.invoke.return_value = mock_parsed_query
         MockChatOpenAI.return_value = mock_llm
@@ -64,7 +64,7 @@ def test_position_lookup():
 
 
 async def retriever_node_async(state):
-    from sportsagent.nodes.retrievernode import retrieve_data
+    from sportsagent.nodes.retriever.retrievernode import retrieve_data
 
     return await retrieve_data(state)
 

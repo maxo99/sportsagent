@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from sportsagent.config import settings, setup_logging
 from sportsagent.constants import TEAM_COLORS
 from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.utils import get_prompt_template
+from sportsagent.nodes.visualization import get_visualization_template
 
 logger = setup_logging(__name__)
 
@@ -41,7 +41,7 @@ def generate_visualization_node(state: ChatbotState) -> ChatbotState:
         # Initialize LLM
         llm = ChatOpenAI(model=settings.OPENAI_MODEL)
 
-        template = get_prompt_template("visualization_instruction.j2")
+        template = get_visualization_template("visualization_instruction.j2")
         prompt_text = template.render(query=state.user_query, data_summary=data_summary)
 
         chain = llm | StrOutputParser()

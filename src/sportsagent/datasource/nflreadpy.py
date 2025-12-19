@@ -7,7 +7,7 @@ import pandas as pd
 
 from sportsagent.config import setup_logging
 from sportsagent.constants import (
-    TEAMS_STATS,
+    TEAMS_STATS_MAP,
 )
 from sportsagent.models.chatboterror import RetrievalError
 
@@ -93,7 +93,7 @@ class NFLReadPyDataSource:
     ) -> pd.DataFrame:
         try:
             if stats is None:
-                stats = TEAMS_STATS["ALL"]
+                stats = TEAMS_STATS_MAP["ALL"]
 
             logger.info(f"Retrieving Team stats for {teams=}, {seasons=}, {summary_level=}")
 
@@ -150,3 +150,29 @@ class NFLReadPyDataSource:
             logger.info("Teams data preloaded successfully")
         except Exception as e:
             logger.error(f"Error preloading teams data: {e}")
+
+    def get_rosters(
+        self,
+        seasons: list[int],
+    ) -> pd.DataFrame:
+        try:
+            logger.info(f"Retrieving rosters for {seasons=}")
+            df = nfl.load_rosters(seasons=seasons).to_pandas()
+            logger.info(f"Retrieved rosters shape {df.shape} cols: {list(df.columns)}")
+            return df
+        except Exception as e:
+            logger.error(f"Error retrieving rosters from nflreadpy: {e}")
+            raise RetrievalError(message=f"Failed to retrieve rosters: {str(e)}") from e
+
+    def get_snap_counts(
+        self,
+        seasons: list[int],
+    ) -> pd.DataFrame:
+        try:
+            logger.info(f"Retrieving snap counts for {seasons=}")
+            df = nfl.load_snap_counts(seasons=seasons).to_pandas()
+            logger.info(f"Retrieved snap counts shape {df.shape} cols: {list(df.columns)}")
+            return df
+        except Exception as e:
+            logger.error(f"Error retrieving snap counts from nflreadpy: {e}")
+            raise RetrievalError(message=f"Failed to retrieve snap counts: {str(e)}") from e

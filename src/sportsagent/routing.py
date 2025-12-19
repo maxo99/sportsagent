@@ -7,7 +7,9 @@ from sportsagent.models.chatbotstate import ChatbotState
 logger = setup_logging(__name__)
 
 
-def should_continue_after_entry(state: ChatbotState) -> Literal["query_parser", "exit"]:
+def should_continue_after_entry(
+    state: ChatbotState,
+) -> Literal["query_parser", "exit"]:
     # Check for errors in entry node
     if state.error == ErrorStates.EMPTY_QUERY:
         logger.info("Entry -> Exit (empty query)")
@@ -17,7 +19,9 @@ def should_continue_after_entry(state: ChatbotState) -> Literal["query_parser", 
     return "query_parser"
 
 
-def should_continue_after_parser(state: ChatbotState) -> Literal["retriever", "exit"]:
+def should_continue_after_parser(
+    state: ChatbotState,
+) -> Literal["retriever", "generate_visualization", "exit"]:
     # Check for parsing errors
     if state.error and "query_parser" in state.error:
         logger.info("Query Parser -> Exit (parsing error)")
@@ -35,11 +39,24 @@ def should_continue_after_parser(state: ChatbotState) -> Literal["retriever", "e
         state.generated_response = "I couldn't understand your question. Please try rephrasing it."
         return "exit"
 
+    if state.pending_action == "rechart":
+        if state.retrieved_data is None or len(state.retrieved_data) == 0:
+            state.generated_response = (
+                "I don't have any data loaded to chart yet. Ask a stats question first."
+            )
+            logger.info("Query Parser -> Exit (rechart without data)")
+            return "exit"
+
+        logger.info("Query Parser -> Generate Visualization (chart-only)")
+        return "generate_visualization"
+
     logger.info("Query Parser -> Retriever")
     return "retriever"
 
 
-def should_continue_after_retriever(state: ChatbotState) -> Literal["AnalyzerReactAgent", "exit"]:
+def should_continue_after_retriever(
+    state: ChatbotState,
+) -> Literal["AnalyzerReactAgent", "exit"]:
     # Check for retrieval errors
     if state.error and "retriever" in state.error:
         logger.info("Retriever -> Exit (retrieval error)")
@@ -63,12 +80,8 @@ def should_continue_after_retriever(state: ChatbotState) -> Literal["AnalyzerRea
 def should_continue_after_analyzer(
     state: ChatbotState,
 ) -> Literal["approval", "generate_visualization", "save_report", "exit"]:
-    # Check for routing signal
-    if isinstance(state.generated_response, str) and state.generated_response.startswith("__ROUTE_TO_RETRIEVER__"):
+    if state.approval_required:
         logger.info("AnalyzerReactAgent -> Approval (request more data)")
-        # Clean up the response before routing
-        # The query is already in state.user_query
-        state.generated_response = ""
         return "approval"
 
     if state.needs_visualization:
@@ -77,3 +90,15 @@ def should_continue_after_analyzer(
 
     logger.info("AnalyzerReactAgent -> Save Report")
     return "save_report"
+
+
+def should_continue_after_approval(
+    state: ChatbotState,
+) -> Literal["query_parser", "exit"]:
+    if state.approval_result == "approved":
+        logger.info("Approval -> Query Parser")
+        return "query_parser"
+
+    state.generated_response = "Data retrieval cancelled."
+    logger.info("Approval -> Exit (denied)")
+    return "exit"

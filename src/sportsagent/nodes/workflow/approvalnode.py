@@ -9,4 +9,5 @@ def approval_node(state: ChatbotState) -> ChatbotState:
     A pass-through node that serves as an interruption point for human approval.
     """
     logger.info("Approval node reached. Waiting for human input if configured.")
+    state.approval_required = False
     return state

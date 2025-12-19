@@ -8,9 +8,9 @@ from langchain.agents import AgentState
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
-from sportsagent import utils
 from sportsagent.agents.baseagent import BaseAgent, get_tool_call_names
 from sportsagent.config import settings, setup_logging
+from sportsagent.nodes.analyzer import get_analyzer_template
 from sportsagent.tools.common import request_more_data
 from sportsagent.tools.dataframe import compare_performance, describe_dataset, explain_data
 
@@ -44,7 +44,7 @@ class AnalyzerAgent(BaseAgent):
     @property
     def systemMessage(self) -> str:
         current_year = datetime.datetime.now().year
-        return utils.get_prompt_template("analyzer_system.j2").render(current_year=current_year)
+        return get_analyzer_template("analyzer_system.j2").render(current_year=current_year)
 
     @property
     def tools(self) -> list:

@@ -66,7 +66,9 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
                     for key, records in state.retrieved_data.items():
                         if records:
                             df = pd.DataFrame(records)
-                            df.to_csv(os.path.join(report_dir, f"retrieved_data_{key}.csv"), index=False)
+                            df.to_csv(
+                                os.path.join(report_dir, f"retrieved_data_{key}.csv"), index=False
+                            )
 
                 chart_filename = "chart.html"
                 logger.info("Saved visualization files.")
@@ -95,11 +97,21 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
             report_content.append(f"```python\n{state.visualization_code}\n```\n")
 
         report_content.append("## Chat History")
-        for turn in state.conversation_history:
-            if "content" in turn:
-                report_content.append(f"**User:** {turn['content']}\n")
-            if "response" in turn:
-                report_content.append(f"**Assistant:** {turn['response']}\n")
+        if state.conversation_history:
+            for turn in state.conversation_history:
+                if "role" in turn and "content" in turn:
+                    role = str(turn["role"]).lower()
+                    label = "Assistant" if role == "assistant" else "User"
+                    report_content.append(f"**{label}:** {turn['content']}\n")
+                    continue
+
+                if "content" in turn:
+                    report_content.append(f"**User:** {turn['content']}\n")
+                if "response" in turn:
+                    report_content.append(f"**Assistant:** {turn['response']}\n")
+
+        if state.generated_response:
+            report_content.append(f"**Assistant:** {state.generated_response}\n")
             # report_content.append("---\n")
             # if isinstance(msg, dict):
             #     role = msg.get("role", "unknown")

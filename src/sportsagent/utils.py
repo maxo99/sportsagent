@@ -14,12 +14,12 @@ from rich.panel import Panel
 from rich.text import Text
 
 
-@lru_cache
-def get_prompt_template(template_name: str) -> Template:
-    template_dir = os.path.join(os.path.dirname(__file__), "prompts")
-    env = Environment(loader=FileSystemLoader(template_dir))
-    template = env.get_template(template_name)
-    return template
+# @lru_cache
+# def get_prompt_template(template_name: str) -> Template:
+#     template_dir = os.path.join(os.path.dirname(__file__), "prompts")
+#     env = Environment(loader=FileSystemLoader(template_dir))
+#     template = env.get_template(template_name)
+#     return template
 
 
 def map_exception_to_error(exception: Exception) -> dict:

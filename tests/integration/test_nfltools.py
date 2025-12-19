@@ -1,5 +1,5 @@
 from sportsagent.models.parsedquery import PlayerStatsQuery, TeamStatsQuery, TimePeriod
-from sportsagent.nodes.retrievernode import fetch_player_statistics, fetch_team_statistics
+from sportsagent.nodes.retriever.retrievernode import fetch_player_statistics, fetch_team_statistics
 
 
 def test_get_player_stats():

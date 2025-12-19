@@ -188,7 +188,6 @@ TEAM_COLORS = {
 }
 
 
-
 # Mapping of common stat name variations to standardized names
 STAT_MAPPINGS = {
     # Passing stats
@@ -239,9 +238,6 @@ PLAYER_STATS_COMMON = [
     "opponent_team",
     "season",
     "week",
-    "penalties",
-    "penalty_yards",
-    "position_group",
     "season_type",
 ]
 
@@ -419,6 +415,9 @@ OTHERS = [
     "punt_return_yards",
     "punt_returns",
     "special_teams_tds",
+    "penalties",
+    "penalty_yards",
+    "position_group",
 ]
 
 
@@ -548,7 +547,7 @@ TEAMS_STATS_OTHERS = [
     "penalty_yards",
     "timeouts",
 ]
-TEAMS_STATS = {
+TEAMS_STATS_MAP = {
     "COMMON": [
         *TEAMS_STATS_COMMON,
     ],
