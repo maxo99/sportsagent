@@ -12,8 +12,9 @@ data/logos/*.tif
 .env
 .ruff_cache/
 .chainlit/
+.plans/
 .langgraph_api/
-/workspace.ipynb
+workspace.ipynb
 
 # Testing and Quality
 .pytest_cache/

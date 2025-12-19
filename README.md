@@ -17,7 +17,7 @@ The core of SportsAgent is a **LangGraph** workflow that orchestrates the intera
 
 ### LangGraph Workflow
 
-The workflow is defined in `src/sportsagent/workflows/graphs/playereval/workflow.py` and consists of the following key nodes:
+The workflow is defined in `src/sportsagent/workflow.py` and consists of the following key nodes:
 
 1. **Query Parser**: Structured intent extraction to understand which players, positions, and stats are requested.
 2. **Retriever**: Fetches raw play-by-play or season-level data using `nflreadpy`.
@@ -29,14 +29,15 @@ The workflow is defined in `src/sportsagent/workflows/graphs/playereval/workflow
 
 This project showcases two distinct HITL patterns:
 
-- **Active Approval**: The workflow explicitly pauses at the `approval_node` when the agent signals a need for more data (`request_more_data` tool). This prevents infinite retrieval loops and gives the user cost control.
-- **Opt-In Visualization**: The `visualization_node` is conditional. The agent sets a `needs_visualization` flag, but the actual generation only occurs after the user confirms via the UI.
+- **Active Approval**: The workflow explicitly pauses at the `approval` interrupt when the agent signals it needs more data. Approval resumes to parsing, then retrieval, so the updated request is treated like any other user query.
+- **Opt-In Visualization**: Visualization is conditional and runs only after the user confirms in the UI.
+- **Chart-only Follow-ups**: If a follow-up is purely a chart presentation change, parsing can route directly to visualization without calling the retriever.
 
 ### State Management
 
 Managing state in a complex agentic workflow is critical. We use a custom Pydantic model `ChatbotState` that tracks:
 
-- **`retrieved_data`**: A dictionary of datasets (`dict[str, list[dict]]`) containing the raw NFL data. Keys typically include "players" or "teams". This structure supports multi-modal analysis (e.g., comparing a player's stats against team averages).
+- **`retrieved_data`**: Stores base datasets (`players`, `teams`) plus optional enrichment datasets (e.g., `rosters`, `snap_counts`) attached under an `extra` mapping.
 - **`visualization`**: Stores the generated Plotly figure as a JSON-serialized dictionary, allowing it to be passed between nodes and rendered by the frontend without pickling issues.
 
 ## Key Components
@@ -92,12 +93,14 @@ graph TD;
  AnalyzerReactAgent -.-> generate_visualization;
  AnalyzerReactAgent -.-> save_report;
  __start__ --> entry;
- approval --> retriever;
+ approval -.-> exit;
+ approval -.-> query_parser;
  entry -.-> exit;
  entry -.-> query_parser;
  execute_visualization --> save_report;
  generate_visualization --> execute_visualization;
  query_parser -.-> exit;
+ query_parser -.-> generate_visualization;
  query_parser -.-> retriever;
  retriever -.-> AnalyzerReactAgent;
  retriever -.-> exit;
@@ -117,6 +120,8 @@ graph TD;
     end
 
 ```
+
+![alt text](docs/langsmith-diagram.png)
 
 <!-- REPORTS-START -->
 ## Generated Reports
