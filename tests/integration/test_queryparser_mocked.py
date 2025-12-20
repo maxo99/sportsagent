@@ -17,7 +17,7 @@ class _DummyStructuredLLM:
     def __init__(self, parsed: ParsedQuery):
         self._parsed = parsed
 
-    def with_structured_output(self, schema: type[Any]) -> _DummyStructuredLLM:  # noqa: ARG002
+    def with_structured_output(self, schema: type[Any], **kwargs: Any) -> _DummyStructuredLLM:  # noqa: ARG002
         return self
 
     def invoke(self, input: Any, temperature: float = 0) -> ParsedQuery:  # noqa: ARG002
