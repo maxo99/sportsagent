@@ -13,7 +13,6 @@ from sportsagent.nodes.visualization.visualizationnode import (
     execute_visualization_node,
     generate_visualization_node,
 )
-from sportsagent.nodes.workflow.approvalnode import approval_node
 from sportsagent.nodes.workflow.entrynode import entry_node
 from sportsagent.nodes.workflow.exitnode import exit_node
 from sportsagent.nodes.workflow.savereportnode import save_report_node
@@ -30,7 +29,6 @@ NODES = {
     "generate_visualization": generate_visualization_node,
     "execute_visualization": execute_visualization_node,
     "save_report": save_report_node,
-    "approval": approval_node,
 }
 
 CONDITIONAL_EDGES = [
@@ -52,12 +50,7 @@ CONDITIONAL_EDGES = [
     (
         "AnalyzerReactAgent",
         routing.should_continue_after_analyzer,
-        ["approval", "generate_visualization", "save_report", "exit"],
-    ),
-    (
-        "approval",
-        routing.should_continue_after_approval,
-        ["query_parser", "exit"],
+        ["generate_visualization", "save_report", "exit"],
     ),
 ]
 
@@ -114,7 +107,6 @@ def compile_workflow(
         interrupt_before=[
             "generate_visualization",
             "execute_visualization",
-            "approval",
             "save_report",
         ],
         **kwargs,

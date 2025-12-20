@@ -40,6 +40,18 @@ if "retrieved_data" not in st.session_state:
     st.session_state["retrieved_data"] = None
 
 # Sidebar
+st.markdown("""
+<style>
+section[data-testid="stSidebar"] {
+    # background-color: #f0f2f6; # Optional: change background
+    font-size: 12px !important; # Adjust the base font size for sidebar
+}
+/* Style for specific elements like selectbox labels */
+div[data-testid="stSidebar"] label {
+    font-size: 10px !important;
+}
+</style>
+""", unsafe_allow_html=True)
 st.sidebar.header("Debug Info")
 st.sidebar.write(f"Session ID: {st.session_state['session_id']}")
 

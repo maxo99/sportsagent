@@ -16,15 +16,11 @@ graph TD;
 	generate_visualization(generate_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
 	execute_visualization(execute_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
 	save_report(save_report<hr/><small><em>__interrupt = before</em></small>):::hitl
-	approval(approval<hr/><small><em>__interrupt = before</em></small>):::hitl
 	__end__([<p>__end__</p>]):::last
-	AnalyzerReactAgent -.-> approval;
 	AnalyzerReactAgent -.-> exit;
 	AnalyzerReactAgent -.-> generate_visualization;
 	AnalyzerReactAgent -.-> save_report;
 	__start__ --> entry;
-	approval -.-> exit;
-	approval -.-> query_parser;
 	entry -.-> exit;
 	entry -.-> query_parser;
 	execute_visualization --> save_report;

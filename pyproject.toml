@@ -154,7 +154,7 @@ max-branches = 12
 [tool.pyright]
 include = ["src", "tests"]
 exclude = [
-    "docker_data",
+    "outputs/",
     "doc",
     "**/node_modules",
     "**/cdk.out",

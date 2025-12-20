@@ -112,6 +112,12 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
 
         if state.generated_response:
             report_content.append(f"**Assistant:** {state.generated_response}\n")
+
+        if state.internal_trace:
+            report_content.append("## Workflow Trace")
+            for trace_item in state.internal_trace:
+                report_content.append(f"- {trace_item}")
+            report_content.append("\n")
             # report_content.append("---\n")
             # if isinstance(msg, dict):
             #     role = msg.get("role", "unknown")

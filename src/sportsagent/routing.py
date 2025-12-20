@@ -79,10 +79,10 @@ def should_continue_after_retriever(
 
 def should_continue_after_analyzer(
     state: ChatbotState,
-) -> Literal["approval", "generate_visualization", "save_report", "exit"]:
+) -> Literal["generate_visualization", "save_report", "exit"]:
     if state.approval_required:
-        logger.info("AnalyzerReactAgent -> Approval (request more data)")
-        return "approval"
+        logger.info("AnalyzerReactAgent -> Exit (request more data / approval required)")
+        return "exit"
 
     if state.needs_visualization:
         logger.info("AnalyzerReactAgent -> Generate Visualization")
@@ -92,13 +92,4 @@ def should_continue_after_analyzer(
     return "save_report"
 
 
-def should_continue_after_approval(
-    state: ChatbotState,
-) -> Literal["query_parser", "exit"]:
-    if state.approval_result == "approved":
-        logger.info("Approval -> Query Parser")
-        return "query_parser"
 
-    state.generated_response = "Data retrieval cancelled."
-    logger.info("Approval -> Exit (denied)")
-    return "exit"

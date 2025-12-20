@@ -5,6 +5,8 @@ from typing import Annotated, Any
 
 import pandas as pd
 from langchain.agents import AgentState
+from langchain.agents.middleware import HumanInTheLoopMiddleware
+from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
@@ -28,12 +30,13 @@ class AnalyzerGraphState(AgentState):
 class AnalyzerAgent(BaseAgent):
     def create(
         self,
-        recursion_limit: int = 5,
+        recursion_limit: int = 20,
         **kwargs,
     ) -> CompiledStateGraph[Any, None, Any, Any]:
         return super().create(
             recursion_limit=recursion_limit,
             state_schema=AnalyzerGraphState,
+            middleware=[HumanInTheLoopMiddleware(interrupt_on={"request_more_data": True})],
             **kwargs,
         )
 
@@ -112,6 +115,7 @@ class AnalyzerAgent(BaseAgent):
                 },
                 config={
                     "configurable": {"thread_id": session_id or settings.DEFAULT_SESSION},
+                    "callbacks": [StdOutCallbackHandler()],
                 },
                 stream_mode="values",
                 **kwargs,
@@ -195,7 +199,8 @@ class AnalyzerAgent(BaseAgent):
         for msg in messages:
             if hasattr(msg, "tool_calls") and msg.tool_calls:
                 for tool_call in msg.tool_calls:
-                    trace.append(f"🛠️ Tool Call: {tool_call['name']}")
+                    args = str(tool_call.get("args", ""))
+                    trace.append(f"🛠️ Tool Call: {tool_call['name']} (Args: {args[:100]}...)")
             elif msg.type == "tool":
                 # content = str(msg.content)[:50] + "..." if len(str(msg.content)) > 50 else str(msg.content)
                 trace.append(f"✅ Tool Output: {msg.name}")

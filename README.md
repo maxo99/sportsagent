@@ -11,6 +11,77 @@ The system operates as a cyclic graph that alternates between **Retrieval** (fet
 - **Interactive Visualization**: Users can request charts, which are generated on-the-fly by the agent writing and executing Plotly code.
 - **Stateful Conversations**: Maintains context across multiple turns, allowing for iterative refinement of queries (e.g., "Compare Mahomes and Allen" -> "Now add Burrow").
 
+## Diagrams
+
+### LangSmith Diagram
+
+![alt text](docs/langsmith-diagram.png)
+
+### LangChain Mermaid Diagram
+
+```mermaid
+---
+config:
+  flowchart:
+    curve: stepAfter
+fontFamily: Arial
+look: handDrawn
+theme: neutral
+---
+graph TD;
+ __start__([<p>__start__</p>]):::first
+ entry(entry)
+ exit(exit)
+ query_parser(query_parser)
+ retriever(retriever)
+ AnalyzerReactAgent(AnalyzerReactAgent)
+ generate_visualization(generate_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
+ execute_visualization(execute_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
+ save_report(save_report<hr/><small><em>__interrupt = before</em></small>):::hitl
+ __end__([<p>__end__</p>]):::last
+ AnalyzerReactAgent -.-> exit;
+ AnalyzerReactAgent -.-> generate_visualization;
+ AnalyzerReactAgent -.-> save_report;
+ __start__ --> entry;
+ entry -.-> exit;
+ entry -.-> query_parser;
+ execute_visualization --> save_report;
+ generate_visualization --> execute_visualization;
+ query_parser -.-> exit;
+ query_parser -.-> generate_visualization;
+ query_parser -.-> retriever;
+ retriever -.-> AnalyzerReactAgent;
+ retriever -.-> exit;
+ save_report --> exit;
+ exit --> __end__;
+ classDef default fill:#E1F5FE,stroke:#01579B,stroke-width:2px,color:#000000,line-height:1.2
+ classDef first fill:#D1C4E9,stroke-dasharray: 5 5,color:#000000
+ classDef last fill:#D1C4E9,stroke:#4A148C,stroke-width:2px,color:#000000
+
+ classDef hitl fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000000
+
+    subgraph Legend
+        direction LR
+        L1(System Step):::default
+        L2(Start / End):::first
+        L3(Human Action):::hitl
+    end
+
+```
+
+<!-- REPORTS-START -->
+## Generated Reports
+
+- [20251219-103956: general query](data/outputs/20251219_103956_general_query/report.md)
+- [20251218-113410: playerstats-QB ALL rushingyards 2025](data/outputs/20251218_113410_playerstats-QB_ALL_rushingyards_2025/report.md)
+- [20251211-181552: RB receivingyards-rushingyards 2023](data/outputs/20251211_181552_RB_receivingyards-rushingyards_2023/report.md)
+- [20251210-184118: QB passingyards 2024](data/outputs/20251210_184118_QB_passingyards_2024/report.md)
+- [20251209-091723: QB passingyards 2025](data/outputs/20251209_091723_QB_passingyards_2025/report.md)
+- [20251209-073659: rushingyards 2024](data/outputs/20251209_073659_rushingyards_2024/report.md)
+- [20251209-065240: QB sackyards 2025](data/outputs/20251209_065240_QB_sackyards_2025/report.md)
+- [20251208-191436: RBs rushyardsavg 2025](data/outputs/20251208_191436_RBs_rushyardsavg_2025/report.md)
+<!-- REPORTS-END -->
+
 ## Architecture & Design
 
 The core of SportsAgent is a **LangGraph** workflow that orchestrates the interaction between the user, the LLM, and the data tools.
@@ -65,74 +136,3 @@ The application frontend is built with Streamlit to provide a rich, interactive 
 - **Data Source**: [nflreadpy](https://github.com/nflverse/nflreadpy)
 - **Frontend**: Streamlit
 - **Visualization**: Plotly
-
-## Diagram
-
-```mermaid
----
-config:
-  flowchart:
-    curve: stepAfter
-fontFamily: Arial
-look: handDrawn
-theme: neutral
----
-graph TD;
- __start__([<p>__start__</p>]):::first
- entry(entry)
- exit(exit)
- query_parser(query_parser)
- retriever(retriever)
- AnalyzerReactAgent(AnalyzerReactAgent)
- generate_visualization(generate_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
- execute_visualization(execute_visualization<hr/><small><em>__interrupt = before</em></small>):::hitl
- save_report(save_report<hr/><small><em>__interrupt = before</em></small>):::hitl
- approval(approval<hr/><small><em>__interrupt = before</em></small>):::hitl
- __end__([<p>__end__</p>]):::last
- AnalyzerReactAgent -.-> approval;
- AnalyzerReactAgent -.-> exit;
- AnalyzerReactAgent -.-> generate_visualization;
- AnalyzerReactAgent -.-> save_report;
- __start__ --> entry;
- approval -.-> exit;
- approval -.-> query_parser;
- entry -.-> exit;
- entry -.-> query_parser;
- execute_visualization --> save_report;
- generate_visualization --> execute_visualization;
- query_parser -.-> exit;
- query_parser -.-> generate_visualization;
- query_parser -.-> retriever;
- retriever -.-> AnalyzerReactAgent;
- retriever -.-> exit;
- save_report --> exit;
- exit --> __end__;
- classDef default fill:#E1F5FE,stroke:#01579B,stroke-width:2px,color:#000000,line-height:1.2
- classDef first fill:#D1C4E9,stroke-dasharray: 5 5,color:#000000
- classDef last fill:#D1C4E9,stroke:#4A148C,stroke-width:2px,color:#000000
-
- classDef hitl fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000000
-
-    subgraph Legend
-        direction LR
-        L1(System Step):::default
-        L2(Start / End):::first
-        L3(Human Action):::hitl
-    end
-
-```
-
-![alt text](docs/langsmith-diagram.png)
-
-<!-- REPORTS-START -->
-## Generated Reports
-
-- [20251219-103956: general query](data/outputs/20251219_103956_general_query/report.md)
-- [20251218-113410: playerstats-QB ALL rushingyards 2025](data/outputs/20251218_113410_playerstats-QB_ALL_rushingyards_2025/report.md)
-- [20251211-181552: RB receivingyards-rushingyards 2023](data/outputs/20251211_181552_RB_receivingyards-rushingyards_2023/report.md)
-- [20251210-184118: QB passingyards 2024](data/outputs/20251210_184118_QB_passingyards_2024/report.md)
-- [20251209-091723: QB passingyards 2025](data/outputs/20251209_091723_QB_passingyards_2025/report.md)
-- [20251209-073659: rushingyards 2024](data/outputs/20251209_073659_rushingyards_2024/report.md)
-- [20251209-065240: QB sackyards 2025](data/outputs/20251209_065240_QB_sackyards_2025/report.md)
-- [20251208-191436: RBs rushyardsavg 2025](data/outputs/20251208_191436_RBs_rushyardsavg_2025/report.md)
-<!-- REPORTS-END -->
