@@ -17,6 +17,8 @@ def mock_state():
     state.user_query = "Show me a chart"
     state.visualization = None
     state.visualization_code = None
+    state.parsed_query = MagicMock()
+    state.parsed_query.chart_spec = None
     return state
 
 
