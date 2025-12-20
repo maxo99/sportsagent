@@ -88,6 +88,7 @@ def test_retrieve_data_append_mode(monkeypatch):
         player_stats_query=PlayerStatsQuery(players=["Allen"], statistics=["passing_yards"]),
         retrieval_merge_intent=RetrievalMergeIntent(mode="append"),
     )
+    state.pending_action = "retrieve"
 
     # Run retriever (using the sync wrapper)
     from sportsagent.nodes.retriever.retrievernode import retriever_node
