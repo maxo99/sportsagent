@@ -7,7 +7,8 @@
 Built with **LangGraph**, it demonstrates a robust **Human-in-the-Loop (HITL)** architecture where the agent autonomously plans analysis steps but defers to the user for critical decisions like data fetching and visualization generation.
 
 [![CI](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml)
-[![Coverage](https://codecov.io/gh/maxo99/sportsagent/branch/main/graph/badge.svg)](https://codecov.io/gh/maxo99/sportsagent)
+
+[![Coverage](https://img.shields.io/badge/coverage-unknown-9e9e9e)](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml)
 
 ## Technical Overview
 
