@@ -8,7 +8,7 @@ Built with **LangGraph**, it demonstrates a robust **Human-in-the-Loop (HITL)** 
 
 [![CI](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml)
 
-[![Coverage](https://img.shields.io/badge/coverage-unknown-9e9e9e)](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-passing-green)](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml)
 
 ## Technical Overview
 
