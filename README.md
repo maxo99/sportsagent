@@ -1,12 +1,21 @@
 # SportsAgent: Autonomous NFL Stats Visualization with LangGraph
 
-[![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-2b6cb0?logo=langgraph&logoColor=white)](https://langchain-ai.github.io/langgraph/)
-[![uv](https://img.shields.io/badge/uv-python%20package%20manager-111827?logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
-[![Plotly](https://img.shields.io/badge/Plotly-visualization-3f4f75?logo=plotly&logoColor=white)](https://plotly.com/python/)
-<a href="https://nflreadpy.nflverse.com/"><img alt="nflverse" src="https://nflreadpy.nflverse.com/assets/nflverse.png" height="20" /></a>[![nflreadpy](https://img.shields.io/badge/nflreadpy-NFL%20data-0052cc)](https://nflreadpy.nflverse.com/)
+
+
 
 **SportsAgent** is an advanced autonomous agent designed to analyze NFL player statistics, perform comparative evaluations, and generate interactive visualizations on demand.
 Built with **LangGraph**, it demonstrates a robust **Human-in-the-Loop (HITL)** architecture where the agent autonomously plans analysis steps but defers to the user for critical decisions like data fetching and visualization generation.
+
+[![CI](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maxo99/sportsagent/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/maxo99/sportsagent/branch/main/graph/badge.svg)](https://codecov.io/gh/maxo99/sportsagent)
+
+## Technical Overview
+
+[![uv](https://img.shields.io/badge/uv-python%20package%20manager-111827?logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-2b6cb0?logo=langgraph&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![LangChain](https://img.shields.io/badge/LangChain-LLM%20orchestration-00aaff?logo=langchain&logoColor=white)](https://langchain.com/)
+[![Plotly](https://img.shields.io/badge/Plotly-visualization-3f4f75?logo=plotly&logoColor=white)](https://plotly.com/python/)
+<a href="https://nflreadpy.nflverse.com/"><img alt="nflverse" src="https://nflreadpy.nflverse.com/assets/nflverse.png" height="20" /></a>[![nflreadpy](https://img.shields.io/badge/nflreadpy-NFL%20data-0052cc)](https://nflreadpy.nflverse.com/)
 
 ## High-Level Overview
 
@@ -17,7 +26,7 @@ The system operates as a cyclic graph that alternates between **Retrieval** (fet
 - **Interactive Visualization**: Users can request charts, which are generated on-the-fly by the agent writing and executing Plotly code.
 - **Stateful Conversations**: Maintains context across multiple turns, allowing for iterative refinement of queries (e.g., "Compare Mahomes and Allen" -> "Now add Burrow").
 
-## Diagrams
+## Workflow Diagrams
 
 ### LangSmith Diagram
 
