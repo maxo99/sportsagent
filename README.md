@@ -1,7 +1,5 @@
+<!-- markdownlint-disable MD033 -->
 # SportsAgent: Autonomous NFL Stats Visualization with LangGraph
-
-
-
 
 **SportsAgent** is an advanced autonomous agent designed to analyze NFL player statistics, perform comparative evaluations, and generate interactive visualizations on demand.
 Built with **LangGraph**, it demonstrates a robust **Human-in-the-Loop (HITL)** architecture where the agent autonomously plans analysis steps but defers to the user for critical decisions like data fetching and visualization generation.
