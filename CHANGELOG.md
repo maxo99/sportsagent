@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v0.0.2 (2025-12-23)
+
+### Chores
+
+- Update test badge
+  ([`a911d29`](https://github.com/maxo99/sportsagent/commit/a911d293c6abcfde260f05dc4d98035488888d35))
+
+### Continuous Integration
+
+- Updates to badge publishing workflow
+  ([`785e2da`](https://github.com/maxo99/sportsagent/commit/785e2da22d2cf35710a9cfa3de7d6baf815972d1))
+
+- Updates to release workflow trigger
+  ([`0afe8ce`](https://github.com/maxo99/sportsagent/commit/0afe8ce3e15d12c76a0d61aae3803a17de3d2860))
+
+### Features
+
+- Api and cli clients with tests and dockerfile + conslidate ci test and release workflow
+  ([`84424ae`](https://github.com/maxo99/sportsagent/commit/84424ae9f3cfbf148e47664fb58288ace26818a6))
+
+### Testing
+
+- Updating dependencies group for ci
+  ([`9c3a635`](https://github.com/maxo99/sportsagent/commit/9c3a63511621dfd45feef50ae1c61cec6512f006))
+
+- Updating dependencies group for ci
+  ([`57b951e`](https://github.com/maxo99/sportsagent/commit/57b951e179f1e8db110c2345ffff7ce18f24f338))
+
+- Updating dependencies group for ci
+  ([`25bb145`](https://github.com/maxo99/sportsagent/commit/25bb145def42591f9a57ffa3725381cdfc6c0cd4))
+
+- Updating dependencies group for ci
+  ([`caf0fb2`](https://github.com/maxo99/sportsagent/commit/caf0fb249b9bd36f41c122c6cab9fa34cf4456c7))
+
+
 ## v0.0.1 (2025-12-22)
 
 ### Bug Fixes
