@@ -89,6 +89,7 @@ jobs:
           perl -pi -e 's|https://img.shields.io/badge/coverage-[^ )]+|https://img.shields.io/badge/coverage-passing-green|' README.md
       - name: Commit badge
         run: |
+          git pull origin main
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add README.md
