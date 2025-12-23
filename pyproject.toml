@@ -44,16 +44,6 @@ dev = [
     "ipykernel",
 ]
 
-
-[dependency-groups]
-dev = [
-    "sportsagent",
-    "pytest>=8.4.1",
-    "pytest-cov>=6.0.0",
-    "ipykernel>=7.1.0",
-    "nbdime>=4.0.2",
-]
-
 api = [
     "fastapi>=0.115.6",
     "uvicorn>=0.32.1",

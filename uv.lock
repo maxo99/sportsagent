@@ -3451,6 +3451,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+api = [
+    { name = "fastapi" },
+    { name = "uvicorn" },
+]
 dev = [
     { name = "ipykernel" },
     { name = "mypy" },
@@ -3460,21 +3464,9 @@ dev = [
     { name = "ruff" },
 ]
 
-[package.dev-dependencies]
-api = [
-    { name = "fastapi" },
-    { name = "uvicorn" },
-]
-dev = [
-    { name = "ipykernel" },
-    { name = "nbdime" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "sportsagent" },
-]
-
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.6" },
     { name = "gitpython", specifier = ">=3.1.45" },
     { name = "ipykernel", marker = "extra == 'dev'" },
     { name = "ipython", specifier = ">=9.7.0" },
@@ -3505,21 +3497,9 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.1" },
     { name = "sportsagent", marker = "extra == 'dev'", editable = "." },
     { name = "streamlit" },
+    { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.32.1" },
 ]
-provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-api = [
-    { name = "fastapi", specifier = ">=0.115.6" },
-    { name = "uvicorn", specifier = ">=0.32.1" },
-]
-dev = [
-    { name = "ipykernel", specifier = ">=7.1.0" },
-    { name = "nbdime", specifier = ">=4.0.2" },
-    { name = "pytest", specifier = ">=8.4.1" },
-    { name = "pytest-cov", specifier = ">=6.0.0" },
-    { name = "sportsagent", editable = "." },
-]
+provides-extras = ["dev", "api"]
 
 [[package]]
 name = "sqlalchemy"
