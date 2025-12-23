@@ -48,11 +48,14 @@ def query_parser_node(state: ChatbotState) -> ChatbotState:
 def _parse_query_sync(state: ChatbotState) -> ChatbotState:
     try:
         return asyncio.run(_parse_query(state))
-    except RuntimeError:
-        # Fallback for when we are already in an event loop (e.g. nested execution)
-        # Note: This might happen in some test environments or if called from async code
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(_parse_query(state))
+    except RuntimeError as exc:
+        if "already running" not in str(exc).lower():
+            raise
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_parse_query(state))
+        finally:
+            loop.close()
 
 
 def _extract_context_from_history(

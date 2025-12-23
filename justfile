@@ -17,3 +17,6 @@ test:
 	
 test-all:
 	uv run pytest --cov=src --cov-report=term-missing tests/unit tests/integration tests/live
+
+run-api:
+	uv run uvicorn sportsagent.api:app --host 0.0.0.0 --port 8000

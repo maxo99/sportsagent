@@ -1,11 +1,10 @@
 import json
-import os
 import uuid
 
 import pandas as pd
 import streamlit as st
 
-from sportsagent.config import setup_logging
+from sportsagent.config import settings, setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import ParsedQuery
 from sportsagent.utils import plotly_from_dict
@@ -162,38 +161,35 @@ def process_final_result(final_state):
 
 def load_reports():
     """Loads list of available reports."""
-    reports_dir = os.path.join("data", "outputs")
-    if not os.path.exists(reports_dir):
+    reports_dir = settings.ASSET_OUTPUT_DIR
+    if not reports_dir.exists():
         return []
 
     reports = []
-    for entry in os.scandir(reports_dir):
+    for entry in reports_dir.iterdir():
         if entry.is_dir() and entry.name.startswith("report_"):
             reports.append(entry.name)
 
-    # Sort by name (which includes timestamp) descending
     reports.sort(reverse=True)
     return reports
 
 
 def display_report(report_dir_name):
     """Displays the content of a selected report."""
-    report_path = os.path.join("data", "outputs", report_dir_name)
+    report_path = settings.ASSET_OUTPUT_DIR / report_dir_name
 
-    # Check for markdown report
-    md_path = os.path.join(report_path, "report.md")
-    if os.path.exists(md_path):
+    md_path = report_path / "report.md"
+    if md_path.exists():
         with open(md_path) as f:
             content = f.read()
         st.markdown(content)
     else:
         st.warning("No report.md found in this directory.")
 
-    # Check for chart
-    chart_json_path = os.path.join(report_path, "chart.json")
-    chart_png_path = os.path.join(report_path, "chart.png")
+    chart_json_path = report_path / "chart.json"
+    chart_png_path = report_path / "chart.png"
 
-    if os.path.exists(chart_json_path):
+    if chart_json_path.exists():
         try:
             with open(chart_json_path) as f:
                 fig_dict = json.load(f)
@@ -201,7 +197,7 @@ def display_report(report_dir_name):
             st.plotly_chart(fig)
         except Exception as e:
             st.error(f"Error loading interactive chart: {e}")
-    elif os.path.exists(chart_png_path):
+    elif chart_png_path.exists():
         st.image(chart_png_path, caption="Chart")
 
 

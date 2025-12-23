@@ -1,0 +1,55 @@
+
+
+
+###
+#
+#
+#
+
+@AUTO_APPROVE_DEFAULT = true
+@SAVE_ASSETS_DEFAULT = true
+@BASE_URL = http://localhost:{{ $dotenv APP_PORT }}
+
+# Health Check
+GET {{BASE_URL}}/healthz
+#
+#
+#
+#
+### @name startChatTurn
+POST {{BASE_URL}}/chat/turn
+content-type: application/json
+
+{
+    "user_query": "Show top 5 QBs by passing yards 2024",
+    "auto_approve": {{AUTO_APPROVE_DEFAULT}},
+    "save_assets_to_file": {{SAVE_ASSETS_DEFAULT}}
+}
+
+####
+#
+#
+#
+#
+@session_id = {{startChatTurn.response.body.session_id}}
+#
+#
+### Chat Turn - Continue Session (reuse session_id from previous response)
+POST {{BASE_URL}}/chat/turn
+content-type: application/json
+
+{
+    "user_query": "Compare Mahomes vs Allen on sacks",
+    "session_id": "{{session_id}}",
+    "auto_approve": {{ AUTO_APPROVE_DEFAULT }},
+    "save_assets_to_file": {{ SAVE_ASSETS_DEFAULT }}
+}
+
+### Approval Decision (when pending contains "approval")
+POST {{BASE_URL}}/chat/approve
+content-type: application/json
+
+{
+    "session_id": "{{session_id}}",
+    "decision": "approved"
+}

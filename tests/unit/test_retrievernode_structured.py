@@ -1,13 +1,14 @@
 import pandas as pd
+
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import (
-    ParsedQuery,
     ChartSpec,
-    RetrievalMergeIntent,
+    ParsedQuery,
     PlayerStatsQuery,
+    RetrievalMergeIntent,
 )
-from sportsagent.nodes.retriever.retrievernode import aggregate_data, retrieve_data_sync
 from sportsagent.models.retrieveddata import RetrievedData
+from sportsagent.nodes.retriever.retrievernode import aggregate_data
 
 
 def test_aggregate_data_with_chart_spec():
@@ -86,7 +87,7 @@ def test_retrieve_data_append_mode(monkeypatch):
     # New query with append mode
     state.parsed_query = ParsedQuery(
         player_stats_query=PlayerStatsQuery(players=["Allen"], statistics=["passing_yards"]),
-        retrieval_merge_intent=RetrievalMergeIntent(mode="append"),
+        retrievalMergeIntent=RetrievalMergeIntent(mode="append"),
     )
     state.pending_action = "retrieve"
 
@@ -95,6 +96,7 @@ def test_retrieve_data_append_mode(monkeypatch):
 
     new_state = retriever_node(state)
 
+    assert new_state.retrieved_data is not None
     assert len(new_state.retrieved_data.players) == 2
     players = [r["player_name"] for r in new_state.retrieved_data.players]
     assert "Mahomes" in players

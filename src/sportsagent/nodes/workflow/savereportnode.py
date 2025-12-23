@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 
 import pandas as pd
@@ -36,10 +35,11 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
     slug = slug[:100]
 
     report_dir_name = f"{timestamp}_{slug}"
-    report_dir = os.path.join("data", "outputs", report_dir_name)
+    report_root = settings.ASSET_OUTPUT_DIR
+    report_dir = report_root / report_dir_name
 
     try:
-        os.makedirs(report_dir, exist_ok=True)
+        report_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Created report directory: {report_dir}")
 
         # Save Chart if exists
@@ -52,12 +52,12 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
                     fig = state.visualization
 
                 # Save as JSON
-                pio.write_json(fig, os.path.join(report_dir, "chart.json"))
+                pio.write_json(fig, report_dir / "chart.json")
                 # Save as HTML
                 if settings.SAVE_HTML:
-                    pio.write_html(fig, os.path.join(report_dir, "chart.html"))
+                    pio.write_html(fig, report_dir / "chart.html")
                 try:
-                    pio.write_image(fig, os.path.join(report_dir, "chart.png"))
+                    pio.write_image(fig, report_dir / "chart.png")
                 except Exception as e:
                     logger.warning(f"Failed to save PNG (kaleido might be missing): {e}")
 
@@ -66,9 +66,7 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
                     for key, records in state.retrieved_data.items():
                         if records:
                             df = pd.DataFrame(records)
-                            df.to_csv(
-                                os.path.join(report_dir, f"retrieved_data_{key}.csv"), index=False
-                            )
+                            df.to_csv(report_dir / f"retrieved_data_{key}.csv", index=False)
 
                 chart_filename = "chart.html"
                 logger.info("Saved visualization files.")
@@ -130,7 +128,7 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
             # report_content.append(f"{content}\n")
 
         # Save Report Markdown
-        with open(os.path.join(report_dir, "report.md"), "w") as f:
+        with open(report_dir / "report.md", "w") as f:
             f.write("\n".join(report_content))
 
         logger.info(f"Saved report.md to {report_dir}")

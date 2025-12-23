@@ -6,12 +6,12 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "streamlit",
-    "chainlit>=2.9.2",
     "nflreadpy>=0.1.5",
     "openai>=2.8.1",
     "pandas>=2.3.3",
     "pydantic",
     "python-dotenv>=1.2.1",
+    "pydantic-settings>=2.12.0",
     "langgraph>=1.0.0",
     "langchain>=1.0.0",
     "langchain-core>=1.0.0",
@@ -20,16 +20,19 @@ dependencies = [
     "langchain-community>=0.4",
     "langgraph-cli[inmem]>=0.4.0",
     "langchain-mcp-adapters",
-    "pydantic-settings>=2.12.0",
+    "langsmith>=0.4.49",
     "plotly>=6.5.0",
     "jinja2>=3.1.4",
     "ipython>=9.7.0",
     "matplotlib>=3.10.7",
-    "langsmith>=0.4.49",
-    "deepagents>=0.2.8",
     "rich>=14.2.0",
     "kaleido>=1.2.0",
+    "gitpython>=3.1.45",
 ]
+
+[project.scripts]
+sportsagent = "sportsagent.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "sportsagent",
@@ -49,6 +52,11 @@ dev = [
     "pytest-cov>=6.0.0",
     "ipykernel>=7.1.0",
     "nbdime>=4.0.2",
+]
+
+api = [
+    "fastapi>=0.115.6",
+    "uvicorn>=0.32.1",
 ]
 
 

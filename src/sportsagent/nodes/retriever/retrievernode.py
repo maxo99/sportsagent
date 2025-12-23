@@ -163,11 +163,14 @@ def fetch_team_statistics(tsq: TeamStatsQuery) -> pd.DataFrame | None:
 def retrieve_data_sync(state: ChatbotState) -> ChatbotState:
     try:
         return asyncio.run(retrieve_data(state))
-    except RuntimeError:
-        # Fallback for when we are already in an event loop (e.g. nested execution)
-        # Note: This might happen in some test environments or if called from async code
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(retrieve_data(state))
+    except RuntimeError as exc:
+        if "already running" not in str(exc).lower():
+            raise
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(retrieve_data(state))
+        finally:
+            loop.close()
 
 
 def retriever_node(state: ChatbotState) -> ChatbotState:
