@@ -22,8 +22,15 @@ def mock_state():
     return state
 
 
+@patch("sportsagent.nodes.visualization.visualizationnode.get_datasource")
 @patch("sportsagent.nodes.visualization.visualizationnode.ChatOpenAI")
-def test_visualization_flow_success(mock_chat_openai, mock_state):
+def test_visualization_flow_success(mock_chat_openai, mock_get_datasource, mock_state):
+    # Mock the datasource
+    mock_datasource = MagicMock()
+    mock_datasource.TEAM_COLORS = {"KC": ["#E31837", "#FFB612"]}
+    mock_datasource.TEAM_LOGO_PATHS = {"KC": "data/logos/KC.png"}
+    mock_get_datasource.return_value = mock_datasource
+
     # Mock the LLM chain response
     mock_llm = MagicMock()
     mock_chat_openai.return_value = mock_llm
@@ -69,3 +76,55 @@ def test_visualization_node_not_needed(mock_chat_openai, mock_state):
     new_state = generate_visualization_node(mock_state)
 
     assert new_state.visualization_code is None
+
+
+@patch("sportsagent.nodes.visualization.visualizationnode.get_datasource")
+def test_execute_visualization_passes_team_data_to_globals(mock_get_datasource, mock_state):
+    """Test that execute_visualization_node passes TEAM_COLORS, TEAM_LOGO_PATHS, and encode_team_logo to exec globals."""
+    # Mock datasource with team data
+    mock_datasource = MagicMock()
+    mock_datasource.TEAM_COLORS = {"KC": ["#E31837", "#FFB612"], "BUF": ["#00338D", "#C60C30"]}
+    mock_datasource.TEAM_LOGO_PATHS = {"KC": "data/logos/KC.png", "BUF": "data/logos/BUF.png"}
+    mock_get_datasource.return_value = mock_datasource
+
+    # Set up state with code that uses these globals
+    mock_state.visualization_code = """
+def generate_plot(df):
+    import plotly.express as px
+    # Access the global variables
+    colors = TEAM_COLORS
+    logos = TEAM_LOGO_PATHS
+    encoder = encode_team_logo
+    fig = px.bar(df, x='col1', y='col2')
+    return fig
+"""
+
+    # Execute
+    result_state = execute_visualization_node(mock_state)
+
+    # Verify the visualization was created (meaning globals were accessible)
+    assert result_state.visualization is not None
+    assert isinstance(result_state.visualization, dict)
+
+
+@patch("sportsagent.nodes.visualization.visualizationnode.get_datasource")
+def test_execute_visualization_with_team_colors_in_code(mock_get_datasource, mock_state):
+    """Test that generated code can actually use TEAM_COLORS dictionary."""
+    mock_datasource = MagicMock()
+    mock_datasource.TEAM_COLORS = {"KC": ["#E31837", "#FFB612"]}
+    mock_datasource.TEAM_LOGO_PATHS = {"KC": "data/logos/KC.png"}
+    mock_get_datasource.return_value = mock_datasource
+
+    # Code that uses TEAM_COLORS
+    mock_state.visualization_code = """
+def generate_plot(df):
+    import plotly.express as px
+    # Use first color from each team
+    color_map = {k: v[0] for k, v in TEAM_COLORS.items()}
+    fig = px.bar(df, x='col1', y='col2')
+    return fig
+"""
+
+    result_state = execute_visualization_node(mock_state)
+
+    assert result_state.visualization is not None

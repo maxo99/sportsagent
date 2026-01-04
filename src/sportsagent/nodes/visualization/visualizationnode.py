@@ -3,9 +3,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 
 from sportsagent.config import settings, setup_logging
-from sportsagent.constants import TEAM_COLORS
+from sportsagent.datasource import get_datasource
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.nodes.visualization import get_visualization_template
+from sportsagent.utils.visualization_helpers import encode_team_logo
 
 logger = setup_logging(__name__)
 
@@ -138,7 +139,12 @@ def execute_visualization_node(state: ChatbotState) -> ChatbotState:
             return state
 
         local_vars = {}
-        global_vars = {"TEAM_COLORS": TEAM_COLORS}
+        datasource = get_datasource()
+        global_vars = {
+            "TEAM_COLORS": datasource.TEAM_COLORS,
+            "TEAM_LOGO_PATHS": datasource.TEAM_LOGO_PATHS,
+            "encode_team_logo": encode_team_logo,
+        }
 
         try:
             exec(state.visualization_code, global_vars, local_vars)

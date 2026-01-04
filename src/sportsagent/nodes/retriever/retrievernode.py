@@ -4,7 +4,7 @@ import pandas as pd
 
 from sportsagent.config import setup_logging
 from sportsagent.constants import CURRENT_SEASON
-from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
+from sportsagent.datasource import get_datasource
 from sportsagent.models.chatboterror import ChatbotError, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import ChartSpec, PlayerStatsQuery, QueryFilters, TeamStatsQuery
@@ -13,7 +13,7 @@ from sportsagent.models.retrieveddata import RetrievedData
 logger = setup_logging(__name__)
 
 
-NFL_DATASOURCE = NFLReadPyDataSource()
+NFL_DATASOURCE = get_datasource()
 
 
 async def retrieve_data(state: ChatbotState) -> ChatbotState:

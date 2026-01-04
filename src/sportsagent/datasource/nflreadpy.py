@@ -1,11 +1,10 @@
-import glob
 from typing import Literal
 from urllib.request import urlretrieve
 
 import nflreadpy as nfl
 import pandas as pd
 
-from sportsagent.config import setup_logging
+from sportsagent.config import Settings, setup_logging
 from sportsagent.models.chatboterror import RetrievalError
 
 logger = setup_logging(__name__)
@@ -27,6 +26,7 @@ class NFLReadPyDataSource:
         # #     timeout=30,
         # #     user_agent='nflreadpy/v0.1.1'
         # # )
+        self.settings = Settings()
         self.TEAM_COLORS = {}
         self.TEAM_LOGO_PATHS = {}
         self.preload_teams_data()
@@ -124,8 +124,10 @@ class NFLReadPyDataSource:
             logger.info("Preloading teams data from nflreadpy")
             teams = nfl.load_teams().to_pandas()
 
-            # If no .tif files exist in logos set logos_preloaded = True
-            logo_files = glob.glob("data/logos/*.tif")
+            logos_dir = self.settings.DATA_DIR / "logos"
+            logos_dir.mkdir(parents=True, exist_ok=True)
+
+            logo_files = list(logos_dir.glob("*.png"))
             if len(logo_files) >= len(teams):
                 self.logos_preloaded = True
 
@@ -138,9 +140,10 @@ class NFLReadPyDataSource:
                     colors.append(row["team_color2"])
                 self.TEAM_COLORS[team_abbr] = colors
 
+                logo_path = logos_dir / f"{team_abbr}.png"
                 if not self.logos_preloaded:
-                    urlretrieve(row["team_logo_espn"], f"data/logos/{row['team_abbr']}.tif")
-                    self.TEAM_LOGO_PATHS[team_abbr] = f"data/logos/{row['team_abbr']}.tif"
+                    urlretrieve(row["team_logo_espn"], str(logo_path))
+                self.TEAM_LOGO_PATHS[team_abbr] = str(logo_path)
             self.logos_preloaded = True
             logger.info("Teams data preloaded successfully")
         except Exception as e:

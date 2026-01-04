@@ -7,7 +7,7 @@ wheels/
 *.egg-info
 
 # Virtual environments
-data/logos/*.tif
+data/logos/*.png
 .venv
 .env
 .ruff_cache/

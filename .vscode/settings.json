@@ -23,7 +23,22 @@
     },
     "pylint.args": [
         "--rcfile=pyproject.toml",
-        "-j"
+        "-j",
+        "--exclude=src/sportsagent/.langgraph_api,src/sportsagent/.chainlit,src/sportsagent/.venv,src/sportsagent/.files,tests/.venv,tests/.files"
+    ],
+    "pylint.ignorePatterns": [
+        "**/site-packages/**/*.py",
+        ".vscode/*.py",
+        "data/*",
+    ],
+    "markdownlint.lintWorkspaceGlobs": [
+        "**/*.{md,mkd,mdwn,mdown,markdown,markdn,mdtxt,mdtext,workbook}",
+        "!**/outputs/*.md",
+        "!**/*.code-search",
+        "!**/bower_components",
+        "!**/node_modules",
+        "!**/.git",
+        "!**/vendor"
     ],
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,

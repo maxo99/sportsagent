@@ -5,7 +5,7 @@ import plotly.io as pio
 
 from sportsagent.config import settings, setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
-from sportsagent.utils import plotly_from_dict
+from sportsagent.utils.visualization_helpers import plotly_from_dict
 
 logger = setup_logging(__name__)
 

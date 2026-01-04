@@ -7,7 +7,7 @@ import streamlit as st
 from sportsagent.config import settings, setup_logging
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import ParsedQuery
-from sportsagent.utils import plotly_from_dict
+from sportsagent.utils.visualization_helpers import plotly_from_dict
 from sportsagent.workflow import compile_workflow
 
 logger = setup_logging(__name__)

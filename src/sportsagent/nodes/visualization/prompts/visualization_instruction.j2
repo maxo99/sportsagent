@@ -26,8 +26,13 @@ Requirements:
 6. Do NOT include any markdown formatting (like ```python).
 7. The code should be a valid Python code block.
 8. **Sorting**: Unless the user specifies otherwise, sort the final data to be plotted. If a Chart Settings suggests an aggregation, sort by the Y-axis descending. Otherwise, sort by the X-axis (e.g., ascending for time/numeric, alphabetically for names).
-9. You have access to a global variable `TEAM_COLORS` which is a dictionary mapping team abbreviations (e.g., 'KC', 'BUF') to hex colors. Default behavior: color charts by the dataset's team column using `color='team'` and `color_discrete_map=TEAM_COLORS` unless the user explicitly requests a different color scheme or the data does not include a team column. Only avoid using `TEAM_COLORS` when it's not appropriate (e.g., no team column or user asks otherwise).
-10. Do NOT define `TEAM_COLORS` yourself. It is already defined in the global scope. Defining it will overwrite the complete list with your partial list.
+9. **Team Colors and Logos**: You have access to global variables for team branding:
+    - `TEAM_COLORS`: Dictionary mapping team abbreviations to hex color lists (e.g., 'KC' → ['#E31837', '#FFB612']).
+    - `TEAM_LOGO_PATHS`: Dictionary mapping team abbreviations to local logo file paths (e.g., 'KC' → 'data/logos/KC.png').
+    - `encode_team_logo(logo_path)`: Helper function that converts a logo file path to a base64 data URI for use in Plotly.
+    - Default behavior: Color charts by team using `color='team'` and `color_discrete_map={k: v[0] for k, v in TEAM_COLORS.items()}` (use first color).
+    - For scatter plots with team logos: Use `plotly.graph_objects` with `add_layout_image()` to place logos at data points.
+10. Do NOT define `TEAM_COLORS`, `TEAM_LOGO_PATHS`, or `encode_team_logo` yourself. They are already defined in the global scope.
 11. **Aggregation vs. Counting**:
     - If the user asks for a "count" or "number of games" (e.g., "games with > 300 yards"), you MUST aggregate the data first.
     - Do NOT just plot the raw metric (e.g., `passing_yards`) on the Y-axis if the goal is to count occurrences.
@@ -38,11 +43,17 @@ Requirements:
     - Use `px.line` for time series or trends over weeks/seasons.
     - If chart_spec.chart_type is provided, respect it; otherwise infer from the data and query.
 13. **Scatter Plot Guidelines**:
-    - For scatter plots with categorical identifiers (teams/players), add text labels using `text='team'` or `text='player_name'`.
-    - Use `fig.update_traces(textposition='top center', textfont_size=10)` to position labels above points.
+    - For scatter plots with categorical identifiers (teams/players), you can either:
+        - Add text labels using `text='team'` or `text='player_name'` with `px.scatter()`
+        - OR use team logos with `plotly.graph_objects`: iterate through rows, use `add_layout_image()` with `encode_team_logo(TEAM_LOGO_PATHS[team])` as the source
+    - Use `fig.update_traces(textposition='top center', textfont_size=10)` to position text labels above points.
     - Include relevant columns in `hover_data` for additional context (e.g., games, totals).
+    - When using logos, add invisible scatter points with `mode='markers', marker=dict(opacity=0)` for hover information.
+    - **CRITICAL for logo sizing**: `sizex` and `sizey` in `add_layout_image()` are in DATA COORDINATES, not pixels!
+        - Calculate appropriate sizes as a percentage of your data range (typically 12-16% of x-range and y-range)
+        - Example: If x ranges 2000-5000, use `sizex = (5000-2000) * 0.16 = 480`
+        - Always calculate: `x_range = df[x_col].max() - df[x_col].min()` then `sizex = x_range * 0.16`
     - Scatter plots typically don't need grouping/color unless comparing categories (e.g., positions, divisions).
-    - For team comparisons, use `color='team'` with `color_discrete_map=TEAM_COLORS` when appropriate.
 14. IMPORTANT: Output ONLY the python code. Do not include any explanation, comments, or text before or after the code.
 
 12. Recommended best-practices for ordering and labels:
@@ -59,10 +70,35 @@ def generate_plot(df):
     # counts = filtered.groupby('player_name').size().reset_index(name='game_count')
     # fig = px.bar(counts, x='player_name', y='game_count')
     
-    # Example: Scatter plot for team stats comparison
+    # Example: Scatter plot with text labels
     # fig = px.scatter(df, x='sacks_suffered', y='passing_interceptions', 
     #                  text='team', hover_data=['games', 'passing_yards'])
     # fig.update_traces(textposition='top center')
+    
+    # Example: Scatter plot with team logos
+    # import plotly.graph_objects as go
+    # fig = go.Figure()
+    # # Calculate appropriate logo sizes (12-16% of data range)
+    # x_range = df['sacks_suffered'].max() - df['sacks_suffered'].min()
+    # y_range = df['passing_interceptions'].max() - df['passing_interceptions'].min()
+    # sizex = x_range * 0.16  # 16% of x-axis range
+    # sizey = y_range * 0.16  # 16% of y-axis range
+    # for _, row in df.iterrows():
+    #     team = row['team']
+    #     logo_uri = encode_team_logo(TEAM_LOGO_PATHS[team])
+    #     fig.add_layout_image(dict(
+    #         source=logo_uri, xref='x', yref='y',
+    #         x=row['sacks_suffered'], y=row['passing_interceptions'],
+    #         sizex=sizex, sizey=sizey, xanchor='center', yanchor='middle', layer='above'
+    #     ))
+    #     # Add invisible point for hover
+    #     fig.add_trace(go.Scatter(
+    #         x=[row['sacks_suffered']], y=[row['passing_interceptions']],
+    #         mode='markers', marker=dict(size=30, opacity=0),
+    #         hovertemplate=f"<b>{team}</b><br>X: {row['sacks_suffered']}<br>Y: {row['passing_interceptions']}<extra></extra>",
+    #         showlegend=False
+    #     ))
+    # fig.update_layout(title='Chart Title', xaxis_title='X', yaxis_title='Y')
     
     fig = px.bar(df, x='col1', y='col2')
     return fig
