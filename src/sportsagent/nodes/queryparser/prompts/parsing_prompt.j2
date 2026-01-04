@@ -35,9 +35,15 @@ Domain Logic & Assumptions:
 
 - **Chart Specification (`chart_spec`)**:
     - When `wants_visualization=true` or `workflow_intent="rechart"`:
-        - Populate `chart_spec` with the most logical `x_axis`, `y_axis`, and `group_by`.
+        - Populate `chart_spec` with the most logical `chart_type`, `x_axis`, `y_axis`, and `group_by`.
+        - Set `chart_type="scatter"` for queries comparing two numeric metrics (e.g., "sacks vs interceptions", "height vs yards", "metric A vs metric B").
+        - Set `chart_type="bar"` for rankings, leaderboards, or categorical comparisons.
+        - Set `chart_type="line"` for time series or trends over weeks/seasons.
         - If the user is asking for seasonal totals or comparisons for individuals, suggest an `aggregation` (usually "sum") and **ALWAYS** include `group_by="player_name"` (or `team`) to avoid collapsing different entities into one row.
-        - Example: "QB Passing yards by height" -> `x_axis="height", y_axis="passing_yards", group_by="player_name", aggregation="sum"`.
+        - For scatter plots, both x_axis and y_axis should be numeric metrics; group_by is typically not needed unless categorizing by position/division.
+        - **For "X vs Y" queries**: Ensure BOTH metrics are included in the `statistics` array. Example: "sacks vs interceptions" → `statistics=["sacks_suffered", "passing_interceptions"]`.
+        - Example: "QB Passing yards by height" → `chart_type="scatter"`, `x_axis="height"`, `y_axis="passing_yards"`, `group_by="player_name"`, `aggregation="sum"`.
+        - Example: "Team sacks vs interceptions 2025" → `chart_type="scatter"`, `x_axis="sacks_suffered"`, `y_axis="passing_interceptions"`, `statistics=["sacks_suffered", "passing_interceptions"]`.
 
 - **EXAMPLES**:
     - "Plot QB passing yards by height"
@@ -45,7 +51,13 @@ Domain Logic & Assumptions:
         - `player_stats_query.position="QB"`, `player_stats_query.statistics=["passing_yards"]`
         - `enrichment_datasets=["player_info"]`
         - `enrichment_options.join_keys=["player_id:gsis_id"]`
-        - `chart_spec.x_axis="height"`, `chart_spec.y_axis="passing_yards"`, `chart_spec.group_by="player_name"`, `chart_spec.aggregation="sum"`
+        - `chart_spec.chart_type="scatter"`, `chart_spec.x_axis="height"`, `chart_spec.y_axis="passing_yards"`, `chart_spec.group_by="player_name"`, `chart_spec.aggregation="sum"`
+        - `wants_visualization=true`
+    
+    - "Create scatter plot for team's sacks suffered vs passing interceptions in 2025"
+        - `query_intent="team_stats"`
+        - `team_stats_query.teams=["ALL"]`, `team_stats_query.statistics=["sacks_suffered", "passing_interceptions"]`, `team_stats_query.timePeriod.seasons=[2025]`
+        - `chart_spec.chart_type="scatter"`, `chart_spec.x_axis="sacks_suffered"`, `chart_spec.y_axis="passing_interceptions"`
         - `wants_visualization=true`
 
 IMPORTANT CONTEXT RESOLUTION FOR FOLLOW-UP QUESTIONS:

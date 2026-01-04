@@ -75,6 +75,8 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
                 state.approval_required = True
                 state.approval_result = None
                 state.generated_response = ""
+                # Preserve needs_visualization flag - don't reset it
+                # state.needs_visualization will carry through to next iteration
                 return state
 
             logger.warning("Could not find REQUEST_MORE_DATA string despite trigger")

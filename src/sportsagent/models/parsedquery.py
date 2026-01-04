@@ -58,6 +58,9 @@ class StatisticsQuery(BaseModel):
 
 
 class ChartSpec(BaseModel):
+    chart_type: Literal["bar", "line", "scatter"] | None = Field(
+        default=None, description="Type of chart to generate"
+    )
     x_axis: str = Field(description="Column name for the x-axis")
     y_axis: str = Field(description="Column name for the y-axis")
     group_by: str | None = Field(

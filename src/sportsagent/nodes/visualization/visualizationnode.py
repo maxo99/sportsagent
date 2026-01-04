@@ -41,13 +41,47 @@ def generate_visualization_node(state: ChatbotState) -> ChatbotState:
         # Initialize LLM
         llm = ChatOpenAI(model=settings.OPENAI_MODEL)
 
+        # Validate chart_spec columns exist in data if chart_spec is provided
+        chart_spec_dict = None
+        if state.parsed_query.chart_spec:
+            chart_spec = state.parsed_query.chart_spec
+            chart_spec_dict = chart_spec.model_dump()
+
+            # Get available columns from primary dataset
+            available_columns = set(primary_df.columns) if primary_df is not None else set()
+
+            # Check if required columns exist
+            missing_columns = []
+            if chart_spec.x_axis and chart_spec.x_axis not in available_columns:
+                missing_columns.append(chart_spec.x_axis)
+            if chart_spec.y_axis and chart_spec.y_axis not in available_columns:
+                missing_columns.append(chart_spec.y_axis)
+
+            if missing_columns:
+                logger.warning(
+                    f"Chart spec references missing columns: {missing_columns}. "
+                    f"Available columns: {list(available_columns)}"
+                )
+                # Try to find similar column names (fuzzy matching)
+                for missing_col in missing_columns[:]:
+                    similar = [
+                        col
+                        for col in available_columns
+                        if missing_col.replace("_", "").lower() in col.replace("_", "").lower()
+                    ]
+                    if similar:
+                        logger.info(f"Found similar column for '{missing_col}': {similar[0]}")
+                        # Update chart_spec_dict with corrected column name
+                        if chart_spec.x_axis == missing_col:
+                            chart_spec_dict["x_axis"] = similar[0]
+                        if chart_spec.y_axis == missing_col:
+                            chart_spec_dict["y_axis"] = similar[0]
+
         template = get_visualization_template("visualization_instruction.j2")
         prompt_text = template.render(
             query=state.user_query,
             data_summary=data_summary,
-            chart_spec=state.parsed_query.chart_spec.model_dump()
-            if state.parsed_query.chart_spec
-            else None,
+            chart_spec=chart_spec_dict,
         )
 
         chain = llm | StrOutputParser()

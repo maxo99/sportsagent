@@ -4,6 +4,7 @@ User Query: {{ query }}
 
 {% if chart_spec %}
 Chart Settings (Suggested):
+{% if chart_spec.chart_type %}- Chart Type: {{ chart_spec.chart_type }}{% endif %}
 - X-Axis: {{ chart_spec.x_axis }}
 - Y-Axis: {{ chart_spec.y_axis }}
 {% if chart_spec.group_by %}- Grouping: {{ chart_spec.group_by }}{% endif %}
@@ -19,7 +20,7 @@ Generate a Python function named `generate_plot` that takes a pandas DataFrame `
 Requirements:
 1. The function must be named `generate_plot`.
 2. It must accept a single argument `df` (pandas DataFrame).
-3. It must return a Plotly figure object (e.g., from `px.bar`, `px.line`, etc.).
+3. It must return a Plotly figure object (e.g., from `px.bar`, `px.line`, `px.scatter`, etc.).
 4. Include all necessary imports INSIDE the function (e.g., `import plotly.express as px`).
 5. Do NOT use `fig.show()`.
 6. Do NOT include any markdown formatting (like ```python).
@@ -31,7 +32,18 @@ Requirements:
     - If the user asks for a "count" or "number of games" (e.g., "games with > 300 yards"), you MUST aggregate the data first.
     - Do NOT just plot the raw metric (e.g., `passing_yards`) on the Y-axis if the goal is to count occurrences.
     - Instead, create a new dataframe that counts the rows meeting the criteria (e.g., `groupby('player_name').size()`) and plot that count.
-11. IMPORTANT: Output ONLY the python code. Do not include any explanation, comments, or text before or after the code.
+12. **Chart Type Selection**:
+    - Use `px.scatter` when comparing two continuous/numeric metrics (e.g., "sacks vs interceptions", "height vs weight", "yards vs touchdowns").
+    - Use `px.bar` for categorical comparisons, rankings, or leaderboards.
+    - Use `px.line` for time series or trends over weeks/seasons.
+    - If chart_spec.chart_type is provided, respect it; otherwise infer from the data and query.
+13. **Scatter Plot Guidelines**:
+    - For scatter plots with categorical identifiers (teams/players), add text labels using `text='team'` or `text='player_name'`.
+    - Use `fig.update_traces(textposition='top center', textfont_size=10)` to position labels above points.
+    - Include relevant columns in `hover_data` for additional context (e.g., games, totals).
+    - Scatter plots typically don't need grouping/color unless comparing categories (e.g., positions, divisions).
+    - For team comparisons, use `color='team'` with `color_discrete_map=TEAM_COLORS` when appropriate.
+14. IMPORTANT: Output ONLY the python code. Do not include any explanation, comments, or text before or after the code.
 
 12. Recommended best-practices for ordering and labels:
 - When you sort by the Y-axis (aggregation case), also set `category_orders` for the X-axis to preserve the displayed order (e.g., `category_orders={'player_name': ordered_list}`), so bars appear in descending order left-to-right.
@@ -46,6 +58,11 @@ def generate_plot(df):
     # filtered = df[df['passing_yards'] > 300]
     # counts = filtered.groupby('player_name').size().reset_index(name='game_count')
     # fig = px.bar(counts, x='player_name', y='game_count')
+    
+    # Example: Scatter plot for team stats comparison
+    # fig = px.scatter(df, x='sacks_suffered', y='passing_interceptions', 
+    #                  text='team', hover_data=['games', 'passing_yards'])
+    # fig.update_traces(textposition='top center')
     
     fig = px.bar(df, x='col1', y='col2')
     return fig

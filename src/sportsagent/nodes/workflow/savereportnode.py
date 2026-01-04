@@ -42,7 +42,6 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
         report_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Created report directory: {report_dir}")
 
-        # Save Chart if exists
         chart_filename = None
         if state.visualization:
             try:
@@ -61,17 +60,20 @@ def save_report_node(state: ChatbotState) -> ChatbotState:
                 except Exception as e:
                     logger.warning(f"Failed to save PNG (kaleido might be missing): {e}")
 
-                # Save Data used for chart if available
-                if state.retrieved_data:
-                    for key, records in state.retrieved_data.items():
-                        if records:
-                            df = pd.DataFrame(records)
-                            df.to_csv(report_dir / f"retrieved_data_{key}.csv", index=False)
-
                 chart_filename = "chart.html"
                 logger.info("Saved visualization files.")
             except Exception as e:
                 logger.error(f"Failed to save visualization: {e}")
+
+        if state.retrieved_data:
+            try:
+                for key, records in state.retrieved_data.items():
+                    if records:
+                        df = pd.DataFrame(records)
+                        df.to_csv(report_dir / f"retrieved_data_{key}.csv", index=False)
+                logger.info("Saved retrieved data CSV files.")
+            except Exception as e:
+                logger.error(f"Failed to save CSV files: {e}")
 
         # Prepare Report Content
         report_content = []
