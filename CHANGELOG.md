@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v0.0.3 (2026-01-04)
+
+### Continuous Integration
+
+- Updating badge reporting action
+  ([`042c228`](https://github.com/maxo99/sportsagent/commit/042c228c72053289a3450cc9d37698784dbf3398))
+
+### Features
+
+- Introducing scatter plot generation
+  ([`44234c2`](https://github.com/maxo99/sportsagent/commit/44234c2a29431007df37a48414a34ef84d39f313))
+
+- Support for using preloaded team logos in plots
+  ([`d36fd95`](https://github.com/maxo99/sportsagent/commit/d36fd95fc1bc8582f427520e1c3329ec4a416469))
+
+### Testing
+
+- Updating dependencies group for ci
+  ([`093227c`](https://github.com/maxo99/sportsagent/commit/093227c1a1f220285f32dd87288aeeea2d3d3bb2))
+
+
 ## v0.0.2 (2025-12-23)
 
 ### Chores
