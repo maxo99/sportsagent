@@ -2,3 +2,6 @@
 # prevent git from trying to merge notebook files
 *.ipynb binary
 
+
+# Use bd merge for beads JSONL files
+.beads/issues.jsonl merge=beads
