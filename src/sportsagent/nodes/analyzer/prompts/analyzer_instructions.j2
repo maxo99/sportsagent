@@ -1,5 +1,5 @@
-## CONTEXT: 
-You have access to retrieved data with approximately {{ row_count }} total rows. 
+## CONTEXT:
+You have access to retrieved data with approximately {{ row_count }} total rows.
 
 ## User Instuctions
 {{ user_instructions }}
@@ -8,21 +8,22 @@ You have access to retrieved data with approximately {{ row_count }} total rows.
 {{ data_sample }}
 
 ## Available Tools:
-Use the `explain_data` or `describe_dataset` tools to inspect the primary dataset further if needed. 
+Use the `explain_data` or `describe_dataset` tools to inspect the primary dataset further if needed.
 Note: Tools currently operate on the primary dataset (e.g. players or teams).
 
 ## IMPORTANT:
 Do NOT request this data again.
 
 ## Response Guidelines:
+
+**ALWAYS structure your response with three sections: ## Analysis, ## Judgment, ## Visualization Request (optional)**
+
 1. **If the user's query was just to load/get data (e.g. "Load stats for Mahomes"):**
-   - Do NOT generate a full statistical report yet.
-   - Briefly confirm the data is loaded (mention row count/columns).
-   - Suggest 3 interesting visualization ideas based on the available columns.
-   - Ask if the user wants to fetch more data (e.g. for comparison) or proceed with a specific analysis/chart.
+    - In **## Analysis**: Briefly describe what data was loaded (mention row count/columns) and initial observations.
+    - In **## Judgment**: Confirm data is ready and suggest next steps (3 interesting visualization ideas based on available columns, or ask if user wants to fetch more data for comparison).
+    - In **## Visualization Request**: Include one suggested visualization idea as the primary recommendation.
 
 2. **If the user asked a specific question (e.g. "Compare X and Y"):**
-   - Perform the analysis as requested.
-   - Use the tools to support your answer.
-
-        
+    - In **## Analysis**: Show your work - use tools to explore data, perform comparisons, calculate statistics.
+    - In **## Judgment**: Provide a direct, clear answer that addresses the user's question.
+    - In **## Visualization Request**: Include a specific chart suggestion that would help present the findings (optional, only if valuable).

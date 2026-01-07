@@ -1,6 +1,9 @@
+import re
+
 import pandas as pd
 
 from sportsagent.config import settings, setup_logging
+from sportsagent.models.analyzeroutput import AnalyzerOutput
 from sportsagent.models.chatboterror import UNKNOWN_ERROR_RESPONSE, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.nodes.analyzer import get_analyzer_template
@@ -65,6 +68,18 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             tool_calls and tool_calls[-1] == "request_more_data"
         ) or "REQUEST_MORE_DATA:" in str(ai_message)
 
+        # Parse structured output from analyzer
+        try:
+            analyzer_output = _parse_structured_output(ai_message)
+            state.analyzer_output = analyzer_output
+
+            # Maintain backward compatibility: set generated_response to judgment
+            state.generated_response = analyzer_output.judgment
+        except Exception as e:
+            logger.warning(f"Failed to parse structured output, using full message: {e}")
+            state.analyzer_output = None
+            state.generated_response = ai_message
+
         if request_triggered:
             new_query = _extract_data_request_query(analyzer_agent, ai_message)
 
@@ -126,3 +141,73 @@ def _extract_data_request_query(agent: AnalyzerAgent, ai_message: str) -> str | 
             return query
 
     return None
+
+
+def _parse_structured_output(ai_message: str) -> AnalyzerOutput:
+    """Parse structured sections from analyzer output.
+
+    Extracts ## Analysis, ## Judgment, and ## Visualization Request sections.
+    Falls back to treating entire message as judgment if sections not found.
+    """
+    analysis = ""
+    judgment = ai_message
+    visualization_request = None
+
+    # Normalize section headings (handle variations like "## Analysis", "### Analysis", etc.)
+    lines = ai_message.split("\n")
+
+    current_section: str | None = None
+    current_content: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Check for section headers (case-insensitive, handles ## or ### prefixes)
+        if re.match(r"#+\s*(Analysis|Judgment|Visualization Request)", stripped, re.IGNORECASE):
+            # Save previous section
+            if current_section == "analysis":
+                analysis = "\n".join(current_content).strip()
+            elif current_section == "judgment":
+                judgment = "\n".join(current_content).strip()
+            elif current_section == "visualization":
+                visualization_request = "\n".join(current_content).strip() or None
+
+            # Start new section
+            section_match = re.match(
+                r"#+\s*(Analysis|Judgment|Visualization Request)", stripped, re.IGNORECASE
+            )
+            if not section_match:
+                continue
+            section_name = section_match.group(1).lower()
+            if section_name == "visualization request":
+                current_section = "visualization"
+            else:
+                current_section = section_name
+            current_content = []
+        else:
+            current_content.append(line)
+
+    # Don't forget the last section
+    if current_section == "analysis":
+        analysis = "\n".join(current_content).strip()
+    elif current_section == "judgment":
+        judgment = "\n".join(current_content).strip()
+    elif current_section == "visualization":
+        visualization_request = "\n".join(current_content).strip() or None
+
+    # If no structured sections found, treat entire message as analysis
+    # and use a brief summary as judgment for backward compatibility
+    if not analysis and not judgment and not visualization_request:
+        # Try splitting by paragraph to extract a summary
+        paragraphs = [p.strip() for p in ai_message.split("\n\n") if p.strip()]
+        if paragraphs:
+            judgment = paragraphs[0]
+            analysis = "\n\n".join(paragraphs[1:]) if len(paragraphs) > 1 else ""
+        else:
+            judgment = ai_message
+
+    return AnalyzerOutput(
+        analysis=analysis,
+        judgment=judgment,
+        visualization_request=visualization_request,
+    )

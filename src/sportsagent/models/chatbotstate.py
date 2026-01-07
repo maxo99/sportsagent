@@ -3,6 +3,7 @@ from typing import Annotated, Any, Literal
 from IPython.display import Markdown
 from pydantic import BaseModel, Field, StringConstraints
 
+from sportsagent.models.analyzeroutput import AnalyzerOutput
 from sportsagent.models.chatboterror import ErrorStates
 from sportsagent.models.parsedquery import ParsedQuery
 from sportsagent.models.retrieveddata import RetrievedData
@@ -10,7 +11,6 @@ from sportsagent.models.retrieveddata import RetrievedData
 type ConversationHistory = list[dict[str, Any]]
 type PendingAction = Literal["retrieve", "enrich", "rechart"]
 type ApprovalResult = Literal["approved", "denied"]
-
 
 
 class ChatbotState(BaseModel):
@@ -33,6 +33,7 @@ class ChatbotState(BaseModel):
     visualization: Any | None = Field(default=None)
     internal_trace: list[str] = Field(default_factory=list)
     skip_save: bool = Field(default=False)
+    analyzer_output: AnalyzerOutput | None = Field(default=None)
 
     def __str__(self) -> str:
         return (
