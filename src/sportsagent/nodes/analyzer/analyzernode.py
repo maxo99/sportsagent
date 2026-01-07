@@ -147,13 +147,11 @@ def _parse_structured_output(ai_message: str) -> AnalyzerOutput:
     """Parse structured sections from analyzer output.
 
     Extracts ## Analysis, ## Judgment, and ## Visualization Request sections.
-    Falls back to treating entire message as judgment if sections not found.
     """
     analysis = ""
-    judgment = ai_message
+    judgment = ""
     visualization_request = None
 
-    # Normalize section headings (handle variations like "## Analysis", "### Analysis", etc.)
     lines = ai_message.split("\n")
 
     current_section: str | None = None
@@ -162,9 +160,9 @@ def _parse_structured_output(ai_message: str) -> AnalyzerOutput:
     for line in lines:
         stripped = line.strip()
 
-        # Check for section headers (case-insensitive, handles ## or ### prefixes)
-        if re.match(r"#+\s*(Analysis|Judgment|Visualization Request)", stripped, re.IGNORECASE):
-            # Save previous section
+        match = re.match(r"#+\s*(Analysis|Judgment|Visualization Request)", stripped, re.IGNORECASE)
+
+        if match:
             if current_section == "analysis":
                 analysis = "\n".join(current_content).strip()
             elif current_section == "judgment":
@@ -172,39 +170,21 @@ def _parse_structured_output(ai_message: str) -> AnalyzerOutput:
             elif current_section == "visualization":
                 visualization_request = "\n".join(current_content).strip() or None
 
-            # Start new section
-            section_match = re.match(
-                r"#+\s*(Analysis|Judgment|Visualization Request)", stripped, re.IGNORECASE
-            )
-            if not section_match:
-                continue
-            section_name = section_match.group(1).lower()
+            section_name = match.group(1).lower()
             if section_name == "visualization request":
                 current_section = "visualization"
             else:
                 current_section = section_name
             current_content = []
-        else:
+        elif current_section:
             current_content.append(line)
 
-    # Don't forget the last section
     if current_section == "analysis":
         analysis = "\n".join(current_content).strip()
     elif current_section == "judgment":
         judgment = "\n".join(current_content).strip()
     elif current_section == "visualization":
         visualization_request = "\n".join(current_content).strip() or None
-
-    # If no structured sections found, treat entire message as analysis
-    # and use a brief summary as judgment for backward compatibility
-    if not analysis and not judgment and not visualization_request:
-        # Try splitting by paragraph to extract a summary
-        paragraphs = [p.strip() for p in ai_message.split("\n\n") if p.strip()]
-        if paragraphs:
-            judgment = paragraphs[0]
-            analysis = "\n\n".join(paragraphs[1:]) if len(paragraphs) > 1 else ""
-        else:
-            judgment = ai_message
 
     return AnalyzerOutput(
         analysis=analysis,
