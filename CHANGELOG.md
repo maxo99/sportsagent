@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v0.0.4 (2026-01-07)
+
+### Chores
+
+- Clean up unused test file
+  ([`9d0d517`](https://github.com/maxo99/sportsagent/commit/9d0d51775965f57af28238098883fa17eb8d2497))
+
+### Features
+
+- Add Beads issue tracking configuration and initial files
+  ([`7e2b529`](https://github.com/maxo99/sportsagent/commit/7e2b5298b706b7d8d55b43bc48992908c2a064f6))
+
+- Implement analyzer structured output
+  ([`bfafb10`](https://github.com/maxo99/sportsagent/commit/bfafb10b2a49888a431b855eac97ac077cda2695))
+
+- Add AnalyzerOutput model with analysis, judgment, and visualization_request fields - Update
+  ChatbotState to include analyzer_output field for structured data - Refine analyzer prompts to
+  enforce structured sections (## Analysis, ## Judgment, ## Visualization Request) - Add
+  _parse_structured_output function to extract structured sections from analyzer output - Update
+  analyzer_node to parse and store structured analyzer output - Maintain backward compatibility:
+  generated_response now maps to analyzer_output.judgment - Add type hints for new variables - All
+  tests passing
+
+
 ## v0.0.3 (2026-01-04)
 
 ### Continuous Integration
