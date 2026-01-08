@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 from urllib.request import urlretrieve
 
@@ -21,11 +22,14 @@ class NFLReadPyDataSource:
         self.settings = Settings()
 
         if self.settings.NFLREADPY_CACHE_MODE != "off":
-            self.settings.NFLREADPY_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            cache_dir = self.settings.NFLREADPY_CACHE_DIR
+            if isinstance(cache_dir, str):
+                cache_dir = Path(cache_dir)
+            cache_dir.mkdir(parents=True, exist_ok=True)
 
             update_config(
                 cache_mode=self.settings.NFLREADPY_CACHE_MODE,
-                cache_dir=str(self.settings.NFLREADPY_CACHE_DIR),
+                cache_dir=self.settings.NFLREADPY_CACHE_DIR,
                 verbose=self.settings.NFLREADPY_CACHE_VERBOSE,
                 timeout=self.settings.NFLREADPY_TIMEOUT,
             )
@@ -139,6 +143,7 @@ class NFLReadPyDataSource:
                 self.logos_preloaded = True
 
             for _, row in teams.iterrows():
+                # Skip logo download for VCR testing
                 team_abbr = row["team_abbr"]
                 colors = []
                 if pd.notna(row.get("team_color")):
@@ -147,7 +152,9 @@ class NFLReadPyDataSource:
                     colors.append(row["team_color2"])
                 self.TEAM_COLORS[team_abbr] = colors
 
+                logo_url = str(row["team_logo_espn"])
                 logo_path = logos_dir / f"{team_abbr}.png"
+                urlretrieve(logo_url, str(logo_path))
                 if not self.logos_preloaded:
                     urlretrieve(row["team_logo_espn"], str(logo_path))
                 self.TEAM_LOGO_PATHS[team_abbr] = str(logo_path)

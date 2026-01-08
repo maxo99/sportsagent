@@ -1,7 +1,16 @@
+import os
 import pytest
+import vcr
 
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.models.parsedquery import ParsedQuery, PlayerStatsQuery, TeamStatsQuery, TimePeriod
+
+my_vcr = vcr.VCR(
+    cassette_library_dir="tests/fixtures/cassettes",
+    record_mode=os.environ.get("VCR_RECORD_MODE", "once"),
+    filter_headers=["authorization"],
+    decode_compressed_response=True,
+)
 
 
 @pytest.fixture

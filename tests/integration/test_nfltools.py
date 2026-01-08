@@ -1,7 +1,17 @@
+import pytest
+import vcr
 from sportsagent.models.parsedquery import PlayerStatsQuery, TeamStatsQuery, TimePeriod
 from sportsagent.nodes.retriever.retrievernode import fetch_player_statistics, fetch_team_statistics
 
+my_vcr = vcr.VCR(
+    cassette_library_dir="../fixtures/cassettes",
+    record_mode="once",
+    filter_headers=["authorization"],
+    decode_compressed_response=True,
+)
 
+
+@my_vcr.use_cassette("test_get_player_stats.yaml")
 def test_get_player_stats():
     player_name = "Kyle Pitts"
     season = 2024  # Using 2024 as 2025 might not have data yet or be partial
@@ -16,6 +26,7 @@ def test_get_player_stats():
     assert "receiving_tds" in df.columns, "DataFrame should contain 'receiving_tds' column"
 
 
+@my_vcr.use_cassette("test_get_team_stats.yaml")
 def test_get_team_stats():
     # Test retrieving stats for a known team
     team_abbr = "KC"
@@ -32,6 +43,7 @@ def test_get_team_stats():
     assert (df["team"] == team_abbr).all(), f"All rows should be for team {team_abbr}"
 
 
+@my_vcr.use_cassette("test_get_team_stats_all.yaml")
 def test_get_team_stats_all():
     # Test retrieving stats for all teams
     season = 2024
