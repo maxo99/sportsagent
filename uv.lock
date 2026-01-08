@@ -3474,7 +3474,7 @@ wheels = [
 
 [[package]]
 name = "sportsagent"
-version = "0.0.5"
+version = "0.0.6"
 source = { editable = "." }
 dependencies = [
     { name = "gitpython" },
