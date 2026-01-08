@@ -11,6 +11,8 @@
         "**/*.pyc": {
             "when": "$(basename).py"
         },
+        ".mypy_cache": true,
+        ".ruff_cache": true,
         "**/*.ruff_cache": true,
         "**/*.venv": true,
         ".files": true,
@@ -19,6 +21,7 @@
         "htmlcov": true,
         ".python-version": true,
         "uv.lock": true,
+        ".coverage": true,
         ".gitattributes": true,
     },
     "pylint.args": [
