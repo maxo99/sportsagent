@@ -52,6 +52,16 @@ class Settings(BaseSettings):
     AUTO_APPROVE_DEFAULT: bool = False
     SAVE_ASSETS_DEFAULT: bool = False
     ASSET_OUTPUT_DIR: Path = Field(default_factory=default_asset_dir)
+    NFLREADPY_CACHE_MODE: str = "filesystem"
+    NFLREADPY_CACHE_DIR: Path = Field(
+        default_factory=lambda: (
+            Path("/app/data/cache/nflreadpy")
+            if os.environ.get("CONTAINER_ENV") == "1"
+            else PROJECT_ROOT / "data" / "cache" / "nflreadpy"
+        )
+    )
+    NFLREADPY_CACHE_VERBOSE: bool = False
+    NFLREADPY_TIMEOUT: int = 30
 
 
 settings = Settings()

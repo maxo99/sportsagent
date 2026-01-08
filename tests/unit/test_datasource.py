@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from sportsagent.datasource import get_datasource
@@ -66,6 +67,60 @@ def test_get_datasource_returns_nflreadpy_instance(mock_datasource_class):
 
     ds = get_datasource()
 
-    # Verify the constructor was called
+    # Verify that constructor was called
     mock_datasource_class.assert_called_once()
     assert ds is mock_instance
+
+
+@patch("nflreadpy.config.update_config")
+@patch("pathlib.Path.mkdir")
+@patch("sportsagent.datasource.nflreadpy.Settings")
+def test_nflreadpy_caching_enabled_by_default(mock_settings, mock_mkdir, mock_update_config):
+    """Test that nflreadpy caching is configured during initialization."""
+    import sportsagent.datasource as ds_module
+    from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
+
+    ds_module._datasource_singleton = None
+
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.NFLREADPY_CACHE_MODE = "filesystem"
+    mock_settings_instance.NFLREADPY_CACHE_DIR = Path("/test/cache")
+    mock_settings_instance.NFLREADPY_CACHE_VERBOSE = False
+    mock_settings_instance.NFLREADPY_TIMEOUT = 30
+    mock_settings.return_value = mock_settings_instance
+
+    ds = NFLReadPyDataSource()
+
+    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+
+    mock_update_config.assert_called_once_with(
+        cache_mode="filesystem",
+        cache_dir="/test/cache",
+        verbose=False,
+        timeout=30,
+    )
+
+    assert ds.settings is mock_settings_instance
+
+
+@patch("nflreadpy.config.update_config")
+@patch("sportsagent.datasource.nflreadpy.Settings")
+def test_nflreadpy_caching_disabled(mock_settings, mock_update_config):
+    """Test that nflreadpy caching can be disabled."""
+    import sportsagent.datasource as ds_module
+    from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
+
+    ds_module._datasource_singleton = None
+
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.NFLREADPY_CACHE_MODE = "off"
+    mock_settings_instance.NFLREADPY_CACHE_DIR = Path("/test/cache")
+    mock_settings_instance.NFLREADPY_CACHE_VERBOSE = False
+    mock_settings_instance.NFLREADPY_TIMEOUT = 30
+    mock_settings.return_value = mock_settings_instance
+
+    ds = NFLReadPyDataSource()
+
+    mock_update_config.assert_not_called()
+
+    assert ds.settings is mock_settings_instance

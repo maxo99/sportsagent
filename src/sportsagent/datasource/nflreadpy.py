@@ -16,17 +16,25 @@ class NFLReadPyDataSource:
     logos_preloaded = False
 
     def __init__(self) -> None:
-        # # from nflreadpy.config import update_config
+        from nflreadpy.config import update_config
 
-        # # update_config(
-        # #     cache_mode="memory",
-        # #     cache_dir='~/.nflreadpy',
-        # #     cache_duration=86400,
-        # #     verbose=False,
-        # #     timeout=30,
-        # #     user_agent='nflreadpy/v0.1.1'
-        # # )
         self.settings = Settings()
+
+        if self.settings.NFLREADPY_CACHE_MODE != "off":
+            self.settings.NFLREADPY_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+            update_config(
+                cache_mode=self.settings.NFLREADPY_CACHE_MODE,
+                cache_dir=str(self.settings.NFLREADPY_CACHE_DIR),
+                verbose=self.settings.NFLREADPY_CACHE_VERBOSE,
+                timeout=self.settings.NFLREADPY_TIMEOUT,
+            )
+            logger.info(
+                f"nflreadpy caching enabled: {self.settings.NFLREADPY_CACHE_MODE} -> {self.settings.NFLREADPY_CACHE_DIR}"
+            )
+        else:
+            logger.info("nflreadpy caching disabled")
+
         self.TEAM_COLORS = {}
         self.TEAM_LOGO_PATHS = {}
         self.preload_teams_data()
@@ -89,7 +97,6 @@ class NFLReadPyDataSource:
         stats: list[str] | None = None,
     ) -> pd.DataFrame:
         try:
-
             logger.info(f"Retrieving Team stats for {teams=}, {seasons=}, {summary_level=}")
 
             df = nfl.load_team_stats(
@@ -174,8 +181,6 @@ class NFLReadPyDataSource:
         except Exception as e:
             logger.error(f"Error retrieving snap counts from nflreadpy: {e}")
             raise RetrievalError(message=f"Failed to retrieve snap counts: {str(e)}") from e
-
-
 
     def get_player_data(
         self,
