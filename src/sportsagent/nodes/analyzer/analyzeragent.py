@@ -6,12 +6,14 @@ from typing import Annotated, Any
 import pandas as pd
 from langchain.agents import AgentState
 from langchain.agents.middleware import HumanInTheLoopMiddleware
+from langchain.agents.structured_output import ToolStrategy
 from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
 from sportsagent.agents.baseagent import BaseAgent, get_tool_call_names
 from sportsagent.config import settings, setup_logging
+from sportsagent.models.analyzeroutput import AnalyzerOutput
 from sportsagent.nodes.analyzer import get_analyzer_template
 from sportsagent.tools.common import request_more_data
 from sportsagent.tools.dataframe import compare_performance, describe_dataset, explain_data
@@ -37,6 +39,7 @@ class AnalyzerAgent(BaseAgent):
             recursion_limit=recursion_limit,
             state_schema=AnalyzerGraphState,
             middleware=[HumanInTheLoopMiddleware(interrupt_on={"request_more_data": True})],
+            response_format=ToolStrategy(AnalyzerOutput),
             **kwargs,
         )
 

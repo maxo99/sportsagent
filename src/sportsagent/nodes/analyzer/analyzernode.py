@@ -1,9 +1,6 @@
-import re
-
 import pandas as pd
 
 from sportsagent.config import settings, setup_logging
-from sportsagent.models.analyzeroutput import AnalyzerOutput
 from sportsagent.models.chatboterror import UNKNOWN_ERROR_RESPONSE, ErrorStates
 from sportsagent.models.chatbotstate import ChatbotState
 from sportsagent.nodes.analyzer import get_analyzer_template
@@ -68,15 +65,23 @@ def analyzer_node(state: ChatbotState) -> ChatbotState:
             tool_calls and tool_calls[-1] == "request_more_data"
         ) or "REQUEST_MORE_DATA:" in str(ai_message)
 
-        # Parse structured output from analyzer
         try:
-            analyzer_output = _parse_structured_output(ai_message)
-            state.analyzer_output = analyzer_output
-
-            # Maintain backward compatibility: set generated_response to judgment
-            state.generated_response = analyzer_output.judgment
+            response = analyzer_agent.response
+            if response is not None:
+                analyzer_output = response.get("structured_response")
+                if analyzer_output:
+                    state.analyzer_output = analyzer_output
+                    state.generated_response = analyzer_output.judgment
+                else:
+                    logger.warning("No structured response received from analyzer")
+                    state.analyzer_output = None
+                    state.generated_response = ai_message
+            else:
+                logger.warning("No response from analyzer agent")
+                state.analyzer_output = None
+                state.generated_response = ai_message
         except Exception as e:
-            logger.warning(f"Failed to parse structured output, using full message: {e}")
+            logger.warning(f"Failed to get structured output, using full message: {e}")
             state.analyzer_output = None
             state.generated_response = ai_message
 
@@ -141,53 +146,3 @@ def _extract_data_request_query(agent: AnalyzerAgent, ai_message: str) -> str | 
             return query
 
     return None
-
-
-def _parse_structured_output(ai_message: str) -> AnalyzerOutput:
-    """Parse structured sections from analyzer output.
-
-    Extracts ## Analysis, ## Judgment, and ## Visualization Request sections.
-    """
-    analysis = ""
-    judgment = ""
-    visualization_request = None
-
-    lines = ai_message.split("\n")
-
-    current_section: str | None = None
-    current_content: list[str] = []
-
-    for line in lines:
-        stripped = line.strip()
-
-        match = re.match(r"#+\s*(Analysis|Judgment|Visualization Request)", stripped, re.IGNORECASE)
-
-        if match:
-            if current_section == "analysis":
-                analysis = "\n".join(current_content).strip()
-            elif current_section == "judgment":
-                judgment = "\n".join(current_content).strip()
-            elif current_section == "visualization":
-                visualization_request = "\n".join(current_content).strip() or None
-
-            section_name = match.group(1).lower()
-            if section_name == "visualization request":
-                current_section = "visualization"
-            else:
-                current_section = section_name
-            current_content = []
-        elif current_section:
-            current_content.append(line)
-
-    if current_section == "analysis":
-        analysis = "\n".join(current_content).strip()
-    elif current_section == "judgment":
-        judgment = "\n".join(current_content).strip()
-    elif current_section == "visualization":
-        visualization_request = "\n".join(current_content).strip() or None
-
-    return AnalyzerOutput(
-        analysis=analysis,
-        judgment=judgment,
-        visualization_request=visualization_request,
-    )

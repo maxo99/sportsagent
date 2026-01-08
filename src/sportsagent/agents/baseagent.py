@@ -1,3 +1,5 @@
+from typing import Any
+
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage
 from langgraph.checkpoint.memory import InMemorySaver
@@ -8,7 +10,7 @@ from sportsagent.config import settings
 
 class BaseAgent:
     _compiled_graph: CompiledStateGraph
-    response = None
+    response: dict[str, Any] | None = None
 
     def __init__(self, **kwargs) -> None:
         self._compiled_graph = self.create(**kwargs)
