@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v0.0.5 (2026-01-08)
+
+### Features
+
+- Add nflreadpy caching configuration and update initialization logic
+  ([`dbdd694`](https://github.com/maxo99/sportsagent/commit/dbdd69471a9705970e6225deb9eae4775d4e3d80))
+
+- Enhance nflreadpy caching and add test for default behavior
+  ([`17c03e3`](https://github.com/maxo99/sportsagent/commit/17c03e3a3f16197509f725e33636537b691e84a0))
+
+### Refactoring
+
+- Remove bloat from structured output parser
+  ([`ca53122`](https://github.com/maxo99/sportsagent/commit/ca5312252fd5a1acec41a9c34f5136b4397b4833))
+
+- Remove verbose fallback logic that tried to extract paragraphs when sections not found - Simplify
+  function to return empty strings if structured sections are not present - Remove duplicate regex
+  matching (was matching same pattern twice) - Aligns with plan guidance: "Avoid verbose fallbacks
+  that bloat the codebase" - Since LLM uses structured output with enforced sections, fallback is
+  not needed
+
+
 ## v0.0.4 (2026-01-07)
 
 ### Chores
