@@ -20,3 +20,9 @@ test-all:
 
 run-api:
 	uv run uvicorn sportsagent.api:app --host 0.0.0.0 --port 8000
+
+validate-cli:
+	uv run sportsagent chat "Show top 3 QBs by passing yards 2024" --auto-approve --save-assets-to-file
+
+validate-container:
+	docker build -t sportsagent . && docker run -v $(pwd)/data/outputs:/app/data/outputs sportsagent chat "Compare Mahomes vs Allen" --auto-approve
