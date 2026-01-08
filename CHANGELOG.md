@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v0.0.8 (2026-01-08)
+
+### Bug Fixes
+
+- Properly configure AGENTS.md git tracking
+  ([`f0dc635`](https://github.com/maxo99/sportsagent/commit/f0dc635dfa8416f7f4a5cc7583a3c41601c18489))
+
+- Update .gitignore to allow AGENTS.md tracking with documentation note - Stage gitignore and
+  pre-commit config changes
+
+### Chores
+
+- Repo cleanup
+  ([`f76591f`](https://github.com/maxo99/sportsagent/commit/f76591f31736d66411c7b1df4ef5438ecec37f3a))
+
+### Features
+
+- Enhance CI workflow to ignore specific paths and conditions for jobs
+  ([`dc5a764`](https://github.com/maxo99/sportsagent/commit/dc5a7648edd8378e48a2b8d52134ca0f55e4aa83))
+
+- Enhance CI workflow to ignore specific paths and conditions for jobs
+  ([`1af2aca`](https://github.com/maxo99/sportsagent/commit/1af2acab54e1c088d1da05e2865376d60134c55f))
+
+- Enhance CI workflow to ignore specific paths and conditions for jobs
+  ([`ea59c3a`](https://github.com/maxo99/sportsagent/commit/ea59c3a886ecae69b4f743171f2d092157aff917))
+
+
 ## v0.0.7 (2026-01-08)
 
 ### Features
