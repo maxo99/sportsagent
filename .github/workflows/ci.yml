@@ -53,15 +53,27 @@ jobs:
         run: docker build -t sportsagent:test .
       - name: Test container startup and healthcheck
         run: |
-          # Start container in background
-          docker run -d --name sportsagent-test -p 8000:8000 sportsagent:test
+          # Test API mode (default)
+          echo "Testing API mode..."
+          docker run -d --name sportsagent-api-test -p 8000:8000 sportsagent:test
           
-          # Wait for container to start (max 30 seconds)
+          # Wait for API container to start (max 30 seconds)
           timeout 30 bash -c 'until curl -f http://localhost:8000/healthz; do sleep 1; done'
           
-          # Clean up
-          docker stop sportsagent-test
-          docker rm sportsagent-test
+          # Clean up API container
+          docker stop sportsagent-api-test
+          docker rm sportsagent-api-test
+          
+          # Test CLI mode
+          echo "Testing CLI mode..."
+          docker run --name sportsagent-cli-test -e SPORTSAGENT_MODE=cli sportsagent:test chat --help
+          
+          # Test entrypoint help
+          echo "Testing entrypoint help..."
+          docker run --name sportsagent-help-test -e SPORTSAGENT_MODE=help sportsagent:test
+          
+          # Clean up CLI containers
+          docker rm sportsagent-cli-test sportsagent-help-test 2>/dev/null || true
 
   release:
     needs: [test, docker]
