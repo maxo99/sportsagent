@@ -1,0 +1,21 @@
+repos:
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: Update uv.lock when dependencies change
+        entry: uv lock
+        language: system
+        files: pyproject.toml
+
+      - id: ruff-check
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        args: [--fix]
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
