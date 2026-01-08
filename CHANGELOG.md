@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.0.7 (2026-01-08)
+
+### Features
+
+- Implement entrypoint script for flexible container startup modes
+  ([`99454c4`](https://github.com/maxo99/sportsagent/commit/99454c43ed2854e53d484023b12990705c09ba3f))
+
+- Implement entrypoint script for flexible container startup modes
+  ([`4133458`](https://github.com/maxo99/sportsagent/commit/413345845a233cc63a735afa7c4e420853ec13ff))
+
+
 ## v0.0.6 (2026-01-08)
 
 ### Features
