@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.0.6 (2026-01-08)
+
+### Features
+
+- Add Docker CI job for building and testing container startup
+  ([`11cc4a8`](https://github.com/maxo99/sportsagent/commit/11cc4a825811868934c119df346d2f8f3820e556))
+
+- Add Docker CI job for building and testing container startup
+  ([`1b8ca24`](https://github.com/maxo99/sportsagent/commit/1b8ca24fce75f91b1e9c65b5d58cae027e7647e7))
+
+
 ## v0.0.5 (2026-01-08)
 
 ### Features
