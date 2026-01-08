@@ -1,5 +1,5 @@
-import pytest
 import vcr
+
 from sportsagent.models.parsedquery import PlayerStatsQuery, TeamStatsQuery, TimePeriod
 from sportsagent.nodes.retriever.retrievernode import fetch_player_statistics, fetch_team_statistics
 
@@ -15,7 +15,6 @@ my_vcr = vcr.VCR(
 def test_get_player_stats():
     player_name = "Kyle Pitts"
     season = 2024  # Using 2024 as 2025 might not have data yet or be partial
-
     query = PlayerStatsQuery(players=[player_name], timePeriod=TimePeriod(seasons=[season]))
 
     df = fetch_player_statistics(query)
@@ -24,6 +23,26 @@ def test_get_player_stats():
     assert not df.empty, "DataFrame should not be empty for a known player"
     assert "receiving_yards" in df.columns, "DataFrame should contain 'receiving_yards' column"
     assert "receiving_tds" in df.columns, "DataFrame should contain 'receiving_tds' column"
+
+
+@my_vcr.use_cassette("test_caching_enabled_by_default.yaml")
+def test_caching_enabled_by_default():
+    # Test that caching is enabled by default and verifies NFLReadPyDataSource initialization
+    from sportsagent.datasource.nflreadpy import NFLReadPyDataSource
+
+    # Create datasource instance (this should trigger caching)
+    datasource = NFLReadPyDataSource()
+
+    # Verify that data directory was created and teams data was preloaded
+    import os
+
+    cache_dir = datasource.settings.NFLREADPY_CACHE_DIR
+    assert cache_dir.exists(), f"Cache directory should exist: {cache_dir}"
+    assert datasource.TEAM_COLORS, "Team colors should be loaded"
+    assert datasource.TEAM_LOGO_PATHS, "Team logo paths should be loaded"
+    assert datasource.logos_preloaded, "Teams data should be preloaded"
+    assert len(datasource.TEAM_COLORS) > 0, "Should have team colors for NFL teams"
+    assert len(datasource.TEAM_LOGO_PATHS) > 0, "Should have team logo paths for NFL teams"
 
 
 @my_vcr.use_cassette("test_get_team_stats.yaml")
@@ -39,7 +58,7 @@ def test_get_team_stats():
     assert df is not None, "DataFrame should not be None"
     assert not df.empty, "DataFrame should not be empty for a known team"
     assert "team" in df.columns, "DataFrame should contain 'team' column"
-    # Verify all rows are for the requested team
+    # Verify all rows are for requested team
     assert (df["team"] == team_abbr).all(), f"All rows should be for team {team_abbr}"
 
 

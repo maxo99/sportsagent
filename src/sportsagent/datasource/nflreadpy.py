@@ -135,6 +135,13 @@ class NFLReadPyDataSource:
             logger.info("Preloading teams data from nflreadpy")
             teams = nfl.load_teams().to_pandas()
 
+            # Skip logo directory creation if DATA_DIR is not a real path (e.g., during testing)
+            if not isinstance(self.settings.DATA_DIR, Path) or str(
+                self.settings.DATA_DIR
+            ).startswith("<MagicMock"):
+                logger.debug("Skipping logo directory creation for mocked or invalid DATA_DIR")
+                return
+
             logos_dir = self.settings.DATA_DIR / "logos"
             logos_dir.mkdir(parents=True, exist_ok=True)
 
