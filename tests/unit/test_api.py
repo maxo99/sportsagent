@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def client() -> TestClient:
-    api._session_store.clear()
+    api._session_manager = api.SessionManager(api.InMemorySessionStore())
     return TestClient(api.app)
 
 
@@ -34,7 +34,7 @@ def test_chat_turn_invokes_runner(
     FakeRunner.instances.clear()
 
     monkeypatch.setattr(api, "WorkflowRunner", FakeRunner)
-    monkeypatch.setattr(api, "_session_store", {})
+    monkeypatch.setattr(api, "_session_manager", api.SessionManager(api.InMemorySessionStore()))
 
     response = client.post("/chat/turn", json={"user_query": "hello"})
 
@@ -58,10 +58,22 @@ def test_approve_resumes_runner(
     FakeRunner.instances.clear()
     runner = FakeRunner()
 
-    monkeypatch.setattr(api, "_session_store", {"session": runner})
+    import asyncio
+
+    async def mock_get_or_create(session_id):
+        from sportsagent.models.chatbotstate import ChatbotState
+
+        return ChatbotState(session_id=session_id, user_query="", generated_response="")
+
+    mock_session_manager = api.SessionManager(api.InMemorySessionStore())
+    mock_session_manager.get_or_create_session = mock_get_or_create
+    monkeypatch.setattr(api, "_session_manager", mock_session_manager)
+    monkeypatch.setattr(api, "WorkflowRunner", FakeRunner)
 
     response = client.post("/chat/approve", json={"session_id": "session", "decision": "approved"})
 
     assert response.status_code == 200
     assert response.json()["pending"] == []
-    assert runner.resume_calls == ["approved"]
+    # Check the runner instance created by the API endpoint (not the manually created one)
+    api_runner = FakeRunner.instances[-1]  # The API should have created the last instance
+    assert api_runner.resume_calls == ["approved"]

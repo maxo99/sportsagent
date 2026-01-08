@@ -19,7 +19,7 @@ test-all:
 	uv run pytest --cov=src --cov-report=term-missing tests/unit tests/integration tests/live
 
 run-api:
-	uv run uvicorn sportsagent.api:app --host 0.0.0.0 --port 8000
+	uv run uvicorn sportsagent.api:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000}
 
 validate-cli:
 	uv run sportsagent chat "Show top 3 QBs by passing yards 2024" --auto-approve --save-assets-to-file

@@ -9,7 +9,7 @@ MODE="${SPORTSAGENT_MODE:-api}"
 case "$MODE" in
     "api")
         echo "Starting SportsAgent API server..."
-        exec uvicorn sportsagent.api:app --host 0.0.0.0 --port 8000
+        exec uvicorn sportsagent.api:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000}
         ;;
     "cli")
         echo "Starting SportsAgent CLI..."
@@ -21,6 +21,8 @@ case "$MODE" in
         echo ""
         echo "Environment Variables:"
         echo "  SPORTSAGENT_MODE    Set to 'api' (default) or 'cli'"
+        echo "  API_HOST           API server host (default: 0.0.0.0)"
+        echo "  API_PORT           API server port (default: 8000)"
         echo ""
         echo "Usage:"
         echo "  docker run sportsagent                    # Start API server"

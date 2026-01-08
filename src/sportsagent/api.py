@@ -1,16 +1,17 @@
 import asyncio
-import uuid
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from sportsagent.config import settings, setup_logging
 from sportsagent.runner import RunResult, WorkflowRunner
+from sportsagent.session.manager import SessionManager
+from sportsagent.session.memory_store import InMemorySessionStore
 
 logger = setup_logging(__name__)
 app = FastAPI()
 
-_session_store: dict[str, WorkflowRunner] = {}
+_session_manager = SessionManager(InMemorySessionStore())
 
 
 class ChatTurnRequest(BaseModel):
@@ -34,32 +35,27 @@ class ChatResponse(BaseModel):
     asset_dir: str
 
 
-def _get_runner(
+async def _get_runner(
     session_id: str | None,
     auto_approve: bool | None,
     save_assets_to_file: bool | None,
 ) -> WorkflowRunner:
     try:
-        target_session = session_id or str(uuid.uuid4())
-        runner = _session_store.get(target_session)
-        if runner is None:
-            runner = WorkflowRunner(
-                session_id=target_session,
-                auto_approve=auto_approve
-                if auto_approve is not None
-                else settings.AUTO_APPROVE_DEFAULT,
-                save_assets_to_file=(
-                    save_assets_to_file
-                    if save_assets_to_file is not None
-                    else settings.SAVE_ASSETS_DEFAULT
-                ),
-            )
-            _session_store[target_session] = runner
-        else:
-            if auto_approve is not None:
-                runner.auto_approve = auto_approve
-            if save_assets_to_file is not None:
-                runner.save_assets_to_file = save_assets_to_file
+        state = await _session_manager.get_or_create_session(session_id)
+        target_session_id = state.session_id
+
+        runner = WorkflowRunner(
+            session_id=target_session_id,
+            auto_approve=auto_approve
+            if auto_approve is not None
+            else settings.AUTO_APPROVE_DEFAULT,
+            save_assets_to_file=(
+                save_assets_to_file
+                if save_assets_to_file is not None
+                else settings.SAVE_ASSETS_DEFAULT
+            ),
+            session_manager=_session_manager,
+        )
         return runner
     except Exception as exc:
         logger.error(f"Failed to fetch runner: {exc}")
@@ -93,7 +89,9 @@ async def healthz() -> dict[str, str]:
 @app.post("/chat/turn", response_model=ChatResponse)
 async def chat_turn(payload: ChatTurnRequest) -> ChatResponse:
     try:
-        runner = _get_runner(payload.session_id, payload.auto_approve, payload.save_assets_to_file)
+        runner = await _get_runner(
+            payload.session_id, payload.auto_approve, payload.save_assets_to_file
+        )
         result = await asyncio.to_thread(runner.run, payload.user_query)
         return _format_response(result)
     except HTTPException:
@@ -106,9 +104,13 @@ async def chat_turn(payload: ChatTurnRequest) -> ChatResponse:
 @app.post("/chat/approve", response_model=ChatResponse)
 async def approve(payload: ApprovalRequest) -> ChatResponse:
     try:
-        runner = _session_store.get(payload.session_id)
-        if runner is None:
-            raise HTTPException(status_code=404, detail="unknown session")
+        state = await _session_manager.get_or_create_session(payload.session_id)
+        runner = WorkflowRunner(
+            session_id=state.session_id,
+            auto_approve=settings.AUTO_APPROVE_DEFAULT,
+            save_assets_to_file=settings.SAVE_ASSETS_DEFAULT,
+            session_manager=_session_manager,
+        )
         decision = payload.decision.lower()
         if decision not in {"approved", "denied"}:
             raise HTTPException(status_code=400, detail="decision must be approved or denied")

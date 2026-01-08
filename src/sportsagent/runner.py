@@ -1,7 +1,9 @@
+import asyncio
 import uuid
 from dataclasses import dataclass
 from typing import Any
 
+import nest_asyncio
 from langchain_core.runnables import RunnableConfig
 
 from sportsagent.config import setup_logging
@@ -26,11 +28,13 @@ class WorkflowRunner:
         session_id: str | None = None,
         auto_approve: bool = False,
         save_assets_to_file: bool = False,
+        session_manager: Any = None,
     ) -> None:
         try:
             self.session_id = session_id or str(uuid.uuid4())
             self.auto_approve = auto_approve
             self.save_assets_to_file = save_assets_to_file
+            self.session_manager = session_manager
             self.graph = compile_workflow(langgraph_platform=False)
             self.base_config = {
                 "configurable": {"thread_id": self.session_id},
@@ -61,10 +65,49 @@ class WorkflowRunner:
             raise
 
     def resume_with_approval(self, decision: str) -> RunResult:
+        """Resume workflow with user's approval decision."""
         try:
             if decision not in ("approved", "denied"):
                 raise ValueError(f"Invalid approval decision: {decision}")
-            self.graph.update_state(self.base_config, {"approval_result": decision})
+
+            # Try to get current state from graph first
+            try:
+                current_state = self.graph.get_state(self.base_config).values
+                if current_state is None or (isinstance(current_state, dict) and not current_state):
+                    # Graph has no state, load from session manager
+                    if self.session_manager:
+                        try:
+                            current_state = asyncio.run(
+                                self.session_manager.get_or_create_session(self.session_id)
+                            )
+                        except RuntimeError:
+                            # Handle case where event loop is already running
+                            nest_asyncio.apply()
+                            loop = asyncio.get_event_loop()
+                            current_state = loop.run_until_complete(
+                                self.session_manager.get_or_create_session(self.session_id)
+                            )
+                    else:
+                        raise ValueError("No session state available and no session manager")
+
+                if isinstance(current_state, ChatbotState):
+                    current_state.approval_result = decision
+                    self.graph.update_state(self.base_config, current_state)
+                else:
+                    # If it's a dict, update the approval_result field
+                    current_state["approval_result"] = decision
+                    self.graph.update_state(self.base_config, current_state)
+
+            except Exception:
+                # If getting state fails, create minimal state with approval
+                minimal_state = ChatbotState(
+                    session_id=self.session_id,
+                    user_query="",
+                    generated_response="",
+                    approval_result=decision,
+                )
+                self.graph.update_state(self.base_config, minimal_state)
+
             return self._drive(None)
         except Exception as exc:  # pragma: no cover - runtime guard
             logger.error(f"WorkflowRunner.resume_with_approval failed: {exc}")
@@ -97,7 +140,9 @@ class WorkflowRunner:
         try:
             resume = False
 
-            has_viz = any(node in pending for node in ["generate_visualization", "execute_visualization"])
+            has_viz = any(
+                node in pending for node in ["generate_visualization", "execute_visualization"]
+            )
 
             if self.auto_approve and has_viz:
                 resume = True
@@ -144,6 +189,21 @@ class WorkflowRunner:
 
                 if state_obj is None:
                     raise ValueError("State unavailable after workflow run")
+
+                if self.session_manager:
+                    import asyncio
+
+                    try:
+                        asyncio.create_task(self.session_manager.save_session(state_obj))
+                    except RuntimeError:
+                        # Handle case where event loop is not running
+                        try:
+                            asyncio.run(self.session_manager.save_session(state_obj))
+                        except RuntimeError:
+                            # Handle case where event loop is already running
+                            nest_asyncio.apply()
+                            loop = asyncio.get_event_loop()
+                            loop.run_until_complete(self.session_manager.save_session(state_obj))
 
                 return RunResult(state=state_obj, pending=[])
         except Exception as exc:  # pragma: no cover - runtime guard
