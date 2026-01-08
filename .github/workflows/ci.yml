@@ -41,8 +41,30 @@ jobs:
           name: coverage-xml
           path: coverage.xml
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker image
+        run: docker build -t sportsagent:test .
+      - name: Test container startup and healthcheck
+        run: |
+          # Start container in background
+          docker run -d --name sportsagent-test -p 8000:8000 sportsagent:test
+          
+          # Wait for container to start (max 30 seconds)
+          timeout 30 bash -c 'until curl -f http://localhost:8000/healthz; do sleep 1; done'
+          
+          # Clean up
+          docker stop sportsagent-test
+          docker rm sportsagent-test
+
   release:
-    needs: test
+    needs: [test, docker]
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'workflow_dispatch'

@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 import dotenv
-import git
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,11 +11,7 @@ dotenv.load_dotenv()
 
 
 # PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-PROJECT_ROOT = Path(
-    os.environ.get(
-        "PROJECT_ROOT", str(git.Repo(".", search_parent_directories=True).working_tree_dir)
-    ),
-)
+PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent.parent))
 
 
 def default_asset_dir() -> Path:
