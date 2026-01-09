@@ -25,6 +25,8 @@ COPY data ./data
 COPY src ./src
 COPY entrypoint.sh /app/entrypoint.sh
 
+RUN chmod +x /app/entrypoint.sh
+
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 

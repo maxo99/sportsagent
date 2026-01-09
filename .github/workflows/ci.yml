@@ -70,7 +70,12 @@ jobs:
           docker run -d --name sportsagent-api-test -p 8000:8000 sportsagent:test
           
           # Wait for API container to start (max 30 seconds)
-          timeout 30 bash -c 'until curl -f http://localhost:8000/healthz; do sleep 1; done'
+          if ! timeout 30 bash -c 'until curl -f http://localhost:8000/healthz; do sleep 1; done'; then
+            echo "API healthcheck failed; dumping container info"
+            docker ps -a
+            docker logs sportsagent-api-test || true
+            exit 1
+          fi
           
           # Clean up API container
           docker stop sportsagent-api-test

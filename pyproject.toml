@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "streamlit",
     "nflreadpy>=0.1.5",
+    "nest-asyncio>=1.6.0",
     "openai>=2.8.1",
     "pandas>=2.3.3",
     "pydantic",
@@ -43,6 +44,7 @@ dev = [
     "mypy>=1.11.1",
     "ipykernel",
     "vcrpy>=6.0.0",
+    "pre-commit>=3.4.0",
 ]
 
 api = [

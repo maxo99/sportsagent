@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Container entrypoint script for SportsAgent
 
 set -e
