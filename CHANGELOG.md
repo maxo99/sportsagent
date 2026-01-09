@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.0.9 (2026-01-09)
+
+### Bug Fixes
+
+- Enhance API healthcheck and improve entrypoint script; add nest-asyncio dependency
+  ([`fcd3fd2`](https://github.com/maxo99/sportsagent/commit/fcd3fd2ffa75f272239a1d1a1150a7eab79db565))
+
+### Features
+
+- Add validation commands for CLI and container in justfile
+  ([`9af0f17`](https://github.com/maxo99/sportsagent/commit/9af0f172cfcf37bc9eca3f97ce7538c2a1422514))
+
+
 ## v0.0.8 (2026-01-08)
 
 ### Bug Fixes
